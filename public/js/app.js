@@ -34,10 +34,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const generalDescriptionInput = document.getElementById('generalDescription');
   
   // Checkboxes
-  const encargoCheckbox = document.getElementById('encargoCheckbox');
-  const encargoSection = document.getElementById('encargoSection');
-  const encargoDescription = document.getElementById('encargoDescription');
-  
   const urgenteCheckbox = document.getElementById('urgenteCheckbox');
   const urgenteSection = document.getElementById('urgenteSection');
   const urgenteDescription = document.getElementById('urgenteDescription');
@@ -196,7 +192,13 @@ document.addEventListener('DOMContentLoaded', () => {
         catalogConcepts[c.id] = parseFloat(c.valor_puntos);
         commonConceptsList.push(c.id);
       });
-      catalogConcepts['Tarea de Mantenimiento'] = 11.95;
+
+      // Cargar valor de mantenimiento dinámico
+      const maintVal = parseFloat(data.settings?.mantenimiento_value || 11.95);
+      catalogConcepts['Tarea de Mantenimiento'] = maintVal;
+
+      // Guardar categorías de imágenes en el estado global
+      window.catalogImageCategories = data.imageCategories || [];
 
       // Procesar cables
       catalogCables = data.cables || [];
@@ -340,10 +342,6 @@ document.addEventListener('DOMContentLoaded', () => {
     urgenteCheckbox.dispatchEvent(new Event('change'));
     if (task.esUrgente?.descripcion) urgenteDescription.value = task.esUrgente.descripcion;
 
-    encargoCheckbox.checked = !!task.porEncargo?.activa;
-    encargoCheckbox.dispatchEvent(new Event('change'));
-    if (task.porEncargo?.descripcion) encargoDescription.value = task.porEncargo.descripcion;
-
     sinExitoCheckbox.checked = !!task.esSinExito;
     sinExitoCheckbox.dispatchEvent(new Event('change'));
 
@@ -411,16 +409,15 @@ document.addEventListener('DOMContentLoaded', () => {
       window.loadParsedDataPreview(task.parsedData);
     }
 
+    // Cargar fotos asociadas
+    loadTaskImages(task.id);
+
     calculatePoints();
   }
 
   // --- MODAL DE COMENTARIO ---
   
   // Exclusividad y visibilidad de secciones por checkboxes
-  encargoCheckbox.addEventListener('change', () => {
-    encargoSection.style.display = encargoCheckbox.checked ? 'block' : 'none';
-  });
-
   urgenteCheckbox.addEventListener('change', () => {
     urgenteSection.style.display = urgenteCheckbox.checked ? 'block' : 'none';
   });
@@ -519,6 +516,94 @@ document.addEventListener('DOMContentLoaded', () => {
         + Agregar Concepto
       </button>
     `;
+
+    // Renderizar área de imágenes para este punto
+    const imagesArea = document.createElement('div');
+    imagesArea.className = 'point-images-area';
+    imagesArea.style.marginTop = '1.5rem';
+    imagesArea.style.borderTop = '1px solid var(--border-color)';
+    imagesArea.style.paddingTop = '1rem';
+    
+    const catOptions = (window.catalogImageCategories || [])
+      .map(cat => `<option value="${cat.name}">${cat.name}</option>`)
+      .join('');
+
+    imagesArea.innerHTML = `
+      <label class="form-label">Imágenes del Punto</label>
+      <div style="display:flex; gap:0.5rem; align-items:center;">
+        <select class="form-control point-image-category" style="font-size:0.8rem; padding:0.4rem; background:rgba(0,0,0,0.3); color:#fff; border:1px solid var(--border-color);">
+          <option value="">-- Seleccionar Título --</option>
+          ${catOptions}
+        </select>
+        <button type="button" class="btn btn-secondary add-images-btn" style="padding:0.4rem 0.8rem; font-size:0.8rem; flex-shrink:0; background:rgba(0,237,255,0.1); border-color:var(--color-info); color:var(--color-info);">
+          Subir Foto
+        </button>
+      </div>
+      <input type="file" class="point-image-input" accept="image/*" style="display:none;">
+      <div class="thumbnails-container" style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-top:0.75rem;">
+        <!-- Aquí irán las miniaturas -->
+      </div>
+    `;
+    div.appendChild(imagesArea);
+
+    const fileInput = imagesArea.querySelector('.point-image-input');
+    const uploadBtn = imagesArea.querySelector('.add-images-btn');
+    const categorySelect = imagesArea.querySelector('.point-image-category');
+    const thumbnailsContainer = imagesArea.querySelector('.thumbnails-container');
+
+    uploadBtn.addEventListener('click', () => {
+      const taskId = taskNumberInput.value.trim();
+      if (!taskId) {
+        alert("Por favor, introduce el número de tarea (ID) en la cabecera antes de subir imágenes.");
+        return;
+      }
+      fileInput.click();
+    });
+
+    fileInput.addEventListener('change', async () => {
+      const file = fileInput.files[0];
+      if (!file) return;
+
+      const taskId = taskNumberInput.value.trim();
+      const currentPointIndex = Array.from(pointSectionsDiv.querySelectorAll('.point-item')).indexOf(div) + 1;
+      const category = categorySelect.value;
+
+      // Crear placeholder de carga
+      const loadingPlaceholder = document.createElement('div');
+      loadingPlaceholder.textContent = "Subiendo...";
+      loadingPlaceholder.style.fontSize = '0.75rem';
+      loadingPlaceholder.style.color = 'var(--color-info)';
+      thumbnailsContainer.appendChild(loadingPlaceholder);
+
+      try {
+        // Comprimir en cliente
+        const compressedFile = await compressImage(file);
+
+        // Subir
+        const formData = new FormData();
+        formData.append('image', compressedFile);
+        if (category) {
+          formData.append('title', category);
+        }
+
+        const res = await fetch(`/api/tasks/${taskId}/points/${currentPointIndex}/images`, {
+          method: 'POST',
+          body: formData
+        });
+        const resData = await res.json();
+
+        if (!res.ok) throw new Error(resData.error);
+
+        // Quitar placeholder e insertar thumbnail
+        loadingPlaceholder.remove();
+        renderThumbnail(thumbnailsContainer, resData.image, taskId, currentPointIndex);
+      } catch (err) {
+        loadingPlaceholder.remove();
+        alert("Error al subir imagen: " + err.message);
+      } finally {
+        fileInput.value = '';
+      }
+    });
 
     pointSectionsDiv.appendChild(div);
 
@@ -730,8 +815,8 @@ document.addEventListener('DOMContentLoaded', () => {
       esSinExito: sinExitoCheckbox.checked,
       puntosTotalesEstimados: parseFloat(totalPointsDisplay.textContent) || 0,
       porEncargo: {
-        activa: encargoCheckbox.checked,
-        descripcion: encargoDescription.value.trim()
+        activa: false,
+        descripcion: ""
       },
       esUrgente: {
         activa: urgenteCheckbox.checked,
@@ -844,7 +929,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let comment = `${taskId}-${formattedDate}#${teamNamesInput.value.trim()} ${equipoSelect.value}.\n`;
 
     if (urgenteCheckbox.checked) comment += "--- TAREA URGENTE ---\n";
-    if (encargoCheckbox.checked) comment += "--- TAREA POR ENCARGO ---\n";
 
     if (generalDescriptionInput.value.trim()) {
       comment += `${generalDescriptionInput.value.trim()}\n`;
@@ -941,7 +1025,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const pointsTotal = totalPointsDisplay.textContent;
 
     if (urgenteCheckbox.checked) summary += "--- TAREA URGENTE ---\n";
-    if (encargoCheckbox.checked) summary += "--- TAREA POR ENCARGO ---\n";
 
     if (sinExitoCheckbox.checked) {
       let mot = sinExitoMotivoSelect.value;
@@ -1059,10 +1142,6 @@ document.addEventListener('DOMContentLoaded', () => {
     ubicacionInput.value = '';
 
     // Checkboxes
-    encargoCheckbox.checked = false;
-    encargoCheckbox.dispatchEvent(new Event('change'));
-    encargoDescription.value = '';
-
     urgenteCheckbox.checked = false;
     urgenteCheckbox.dispatchEvent(new Event('change'));
     urgenteDescription.value = '';
@@ -1103,6 +1182,168 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Establecer fecha por defecto en formulario
   taskDateInput.value = new Date().toISOString().split('T')[0];
+
+  // --- HELPER DE COMPRESIÓN DE IMÁGENES EN CLIENTE ---
+  function compressImage(file, maxWidth = 1200, maxHeight = 1200, quality = 0.75) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target.result;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > maxWidth) {
+              height = Math.round((height * maxWidth) / width);
+              width = maxWidth;
+            }
+          } else {
+            if (height > maxHeight) {
+              width = Math.round((width * maxHeight) / height);
+              height = maxHeight;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+
+          canvas.toBlob((blob) => {
+            if (blob) {
+              resolve(new File([blob], file.name, {
+                type: 'image/jpeg',
+                lastModified: Date.now()
+              }));
+            } else {
+              reject(new Error("Error al comprimir imagen."));
+            }
+          }, 'image/jpeg', quality);
+        };
+        img.onerror = (err) => reject(err);
+      };
+      reader.onerror = (err) => reject(err);
+    });
+  }
+
+  // --- RENDER DE MINIATURAS ---
+  function renderThumbnail(container, imgData, taskId, pointId) {
+    const thumb = document.createElement('div');
+    thumb.style.position = 'relative';
+    thumb.style.width = '70px';
+    thumb.style.height = '70px';
+    thumb.style.borderRadius = 'var(--radius-sm)';
+    thumb.style.border = '1px solid var(--border-color)';
+    thumb.style.overflow = 'hidden';
+    thumb.style.background = `url(${imgData.image_path}) center/cover no-repeat`;
+    
+    if (imgData.title) {
+      thumb.title = imgData.title;
+    }
+
+    const delBtn = document.createElement('button');
+    delBtn.type = 'button';
+    delBtn.innerHTML = '&times;';
+    delBtn.style.position = 'absolute';
+    delBtn.style.top = '0';
+    delBtn.style.right = '0';
+    delBtn.style.background = 'rgba(239, 68, 68, 0.8)';
+    delBtn.style.color = '#fff';
+    delBtn.style.border = 'none';
+    delBtn.style.borderRadius = '0 0 0 var(--radius-sm)';
+    delBtn.style.cursor = 'pointer';
+    delBtn.style.padding = '2px 6px';
+    delBtn.style.fontSize = '12px';
+    delBtn.style.fontWeight = 'bold';
+
+    delBtn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      if (!confirm(`¿Desea eliminar la imagen "${imgData.title || 'sin título'}"?`)) return;
+      try {
+        const res = await fetch(`/api/tasks/${taskId}/images/${imgData.id}`, { method: 'DELETE' });
+        if (res.ok) {
+          thumb.remove();
+        } else {
+          alert("Error al eliminar la imagen.");
+        }
+      } catch (err) {
+        alert("Error al eliminar.");
+      }
+    });
+
+    thumb.appendChild(delBtn);
+    
+    if (imgData.title) {
+      const label = document.createElement('div');
+      label.textContent = imgData.title;
+      label.style.position = 'absolute';
+      label.style.bottom = '0';
+      label.style.left = '0';
+      label.style.right = '0';
+      label.style.background = 'rgba(0,0,0,0.6)';
+      label.style.color = '#fff';
+      label.style.fontSize = '8px';
+      label.style.textAlign = 'center';
+      label.style.whiteSpace = 'nowrap';
+      label.style.overflow = 'hidden';
+      label.style.textOverflow = 'ellipsis';
+      thumb.appendChild(label);
+    }
+
+    container.appendChild(thumb);
+  }
+
+  // --- CARGAR IMÁGENES ASOCIADAS A LA TAREA ---
+  async function loadTaskImages(taskId) {
+    try {
+      const res = await fetch(`/api/tasks/${taskId}/images`);
+      if (!res.ok) throw new Error();
+      const images = await res.json();
+      
+      images.forEach(img => {
+        const pointItems = pointSectionsDiv.querySelectorAll('.point-item');
+        const pointCard = pointItems[img.point_id - 1];
+        if (pointCard) {
+          const thumbnailsContainer = pointCard.querySelector('.thumbnails-container');
+          if (thumbnailsContainer) {
+            renderThumbnail(thumbnailsContainer, img, taskId, img.point_id);
+          }
+        }
+      });
+    } catch (e) {
+      console.error("Error al cargar imágenes de la tarea:", e);
+    }
+  }
+
+  // Exponer buscar tarea por id globalmente para orders.js
+  window.buscarTareaPorId = async function(taskId) {
+    if (!taskId || isCheckingTask) return;
+    isCheckingTask = true;
+    try {
+      const res = await fetch(`/api/tasks/${taskId}`);
+      const data = await res.json();
+
+      if (res.status === 403) {
+        showMessage("Acceso Denegado", data.error);
+        taskNumberInput.value = '';
+        return;
+      }
+
+      if (data.found) {
+        loadTaskForm(data.task);
+      } else {
+        showMessage("No encontrada", "No se encontró la tarea en el servidor local ni en el respaldo.");
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      isCheckingTask = false;
+    }
+  };
 
   // --- ARRANQUE DE LA APP ---
   async function startup() {

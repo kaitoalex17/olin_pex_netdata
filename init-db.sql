@@ -123,6 +123,26 @@ CREATE TABLE IF NOT EXISTS system_settings (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Asegurar columna status en tasks (por si la BD ya existe)
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'finalizada';
+
+-- 9. Categorías de Imágenes
+CREATE TABLE IF NOT EXISTS image_categories (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(150) UNIQUE NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 10. Imágenes de Tareas por Punto
+CREATE TABLE IF NOT EXISTS task_images (
+    id SERIAL PRIMARY KEY,
+    task_id VARCHAR(50) REFERENCES tasks(id) ON DELETE CASCADE,
+    point_id INTEGER NOT NULL,
+    image_path TEXT NOT NULL,
+    title VARCHAR(150),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- --- SEMILLAS INICIALES ---
 
 -- Equipos
@@ -163,7 +183,6 @@ INSERT INTO cables (id, nombre, puntos) VALUES
 ('aereo', 'Cable Aéreo', 0.0902)
 ON CONFLICT (id) DO UPDATE SET nombre = EXCLUDED.nombre, puntos = EXCLUDED.puntos;
 
--- Materiales
 INSERT INTO materials (id, orden) VALUES
 ('Cable Aereo', 1),
 ('Cable Tierra', 2),
@@ -186,3 +205,20 @@ INSERT INTO materials (id, orden) VALUES
 ('Pasamuro (enfrentador)', 19),
 ('Pachcord (latiguillo)', 20)
 ON CONFLICT (id) DO UPDATE SET orden = EXCLUDED.orden;
+
+-- 11. Ajustes globales del sistema
+INSERT INTO system_settings (key, value) VALUES
+('mantenimiento_value', '11.95')
+ON CONFLICT (key) DO NOTHING;
+
+-- 12. Categorías de Imágenes por Defecto
+INSERT INTO image_categories (name) VALUES
+('Fusiones'),
+('Etiquetado'),
+('Señal CTO'),
+('Señal divisor 1'),
+('Señal divisor 2'),
+('Caja abierta'),
+('Entorno/Colgado'),
+('Antes de intervenir')
+ON CONFLICT (name) DO NOTHING;

@@ -43,6 +43,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const groqKeyInput = document.getElementById('groqKeyInput');
   const testGroqBtn = document.getElementById('testGroqBtn');
   const groqKeyStatus = document.getElementById('groqKeyStatus');
+  const mantenimientoValueForm = document.getElementById('mantenimientoValueForm');
+  const mantenimientoPointsInput = document.getElementById('mantenimientoPointsInput');
+  const categoryForm = document.getElementById('categoryForm');
+  const categoryNameInput = document.getElementById('categoryNameInput');
+  const categoriesTableBody = document.getElementById('categoriesTableBody');
 
   // Estado local para equipos y miembros
   let systemTeams = [];
@@ -89,6 +94,11 @@ document.addEventListener('DOMContentLoaded', () => {
       renderConceptsList(config.concepts);
       renderCablesList(config.cables);
       renderMaterialsList(config.materials);
+      renderCategoriesList(config.imageCategories || []);
+      
+      if (config.settings?.mantenimiento_value) {
+        mantenimientoPointsInput.value = config.settings.mantenimiento_value;
+      }
 
       // Rellenar desplegables de equipos en formularios
       fillTeamSelectOptions(config.teams);
@@ -484,4 +494,94 @@ document.addEventListener('DOMContentLoaded', () => {
       alert("Error al guardar: " + err.message);
     }
   });
+
+  // --- CONFIGURACIÓN DE TAREA DE MANTENIMIENTO ---
+
+  mantenimientoValueForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const value = parseFloat(mantenimientoPointsInput.value);
+    if (isNaN(value)) {
+      alert("Por favor introduce un valor numérico válido.");
+      return;
+    }
+    try {
+      const res = await fetch('/api/config/mantenimiento-value', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ value })
+      });
+      if (res.ok) {
+        alert("Valor de mantenimiento guardado con éxito.");
+        loadSettingsData();
+      } else {
+        alert("Error al guardar.");
+      }
+    } catch (err) {
+      alert("Error de conexión.");
+    }
+  });
+
+  // --- CONFIGURACIÓN DE CATEGORÍAS DE IMÁGENES ---
+
+  categoryForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = categoryNameInput.value.trim();
+    if (!name) return;
+
+    try {
+      const res = await fetch('/api/config/image-categories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name })
+      });
+      if (res.ok) {
+        categoryNameInput.value = '';
+        loadSettingsData();
+        alert("Título de imagen agregado.");
+      } else {
+        alert("Error al agregar.");
+      }
+    } catch (err) {
+      alert("Error de conexión.");
+    }
+  });
+
+  function renderCategoriesList(categories) {
+    categoriesTableBody.innerHTML = '';
+    if (categories.length === 0) {
+      categoriesTableBody.innerHTML = '<tr><td colspan="2" style="text-align:center; color:var(--text-secondary);">No hay títulos de imágenes configurados.</td></tr>';
+      return;
+    }
+
+    categories.forEach(cat => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${cat.name}</td>
+        <td>
+          <button type="button" class="btn btn-secondary delete-cat-btn" data-id="${cat.id}" style="padding:0.25rem 0.5rem; background:rgba(239, 68, 68, 0.15); border-color:rgba(239, 68, 68, 0.3); color:var(--color-danger);">
+            Eliminar
+          </button>
+        </td>
+      `;
+      categoriesTableBody.appendChild(tr);
+    });
+
+    categoriesTableBody.querySelectorAll('.delete-cat-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        if (!confirm("¿Está seguro de eliminar este título de imagen?")) return;
+        const id = btn.getAttribute('data-id');
+        try {
+          const res = await fetch(`/api/config/image-categories/${id}`, { method: 'DELETE' });
+          if (res.ok) {
+            loadSettingsData();
+            alert("Título eliminado.");
+          } else {
+            alert("Error al eliminar.");
+          }
+        } catch (err) {
+          alert("Error al eliminar.");
+        }
+      });
+    });
+  }
 });

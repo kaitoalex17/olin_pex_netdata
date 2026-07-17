@@ -192,12 +192,19 @@ app.get('/api/config', requireAuth, async (req, res) => {
     const concepts = await db.query('SELECT * FROM concepts ORDER BY orden, id');
     const cables = await db.query('SELECT * FROM cables ORDER BY nombre');
     const materials = await db.query('SELECT * FROM materials ORDER BY orden, id');
+    const settings = await db.query('SELECT * FROM system_settings');
+    const categories = await db.query('SELECT * FROM image_categories ORDER BY name');
+
+    const settingsMap = {};
+    settings.rows.forEach(r => settingsMap[r.key] = r.value);
 
     res.json({
       teams: teams.rows,
       concepts: concepts.rows,
       cables: cables.rows,
-      materials: materials.rows
+      materials: materials.rows,
+      settings: settingsMap,
+      imageCategories: categories.rows
     });
   } catch (error) {
     console.error("Error al obtener configuración:", error);
@@ -419,9 +426,9 @@ app.post('/api/tasks', requireAuth, async (req, res) => {
         tarea_mantenimiento_activa, tarea_mantenimiento_descripcion, tarea_mantenimiento_informacion,
         puntos_trabajo, gasto_material, informacion_adicional_material, cable_desplegado,
         sin_exito_motivo, sin_exito_visitas, sin_exito_direccion, sin_exito_informacion,
-        created_by
+        created_by, status
       ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, 'finalizada'
       )
       ON CONFLICT (id) DO UPDATE SET
         fecha = EXCLUDED.fecha,
@@ -445,7 +452,8 @@ app.post('/api/tasks', requireAuth, async (req, res) => {
         sin_exito_motivo = EXCLUDED.sin_exito_motivo,
         sin_exito_visitas = EXCLUDED.sin_exito_visitas,
         sin_exito_direccion = EXCLUDED.sin_exito_direccion,
-        sin_exito_informacion = EXCLUDED.sin_exito_informacion
+        sin_exito_informacion = EXCLUDED.sin_exito_informacion,
+        status = EXCLUDED.status
     `;
 
     const params = [
@@ -457,8 +465,8 @@ app.post('/api/tasks', requireAuth, async (req, res) => {
       taskData.descripcionGeneral || taskData.descripcion_general || '',
       !!taskData.esSinExito,
       parseFloat(taskData.puntosTotalesEstimados || 0),
-      !!taskData.porEncargo?.activa,
-      taskData.porEncargo?.descripcion || '',
+      false, // Removido por encargo activa
+      '',    // Removido por encargo descripcion
       !!taskData.esUrgente?.activa,
       taskData.esUrgente?.descripcion || '',
       !!taskData.tareaMantenimiento?.activa,
@@ -992,6 +1000,270 @@ app.get('/api/generate-pdf/:taskId', requireAuth, async (req, res) => {
   } catch (error) {
     console.error("Error al generar PDF:", error);
     res.status(500).send('Error al generar PDF.');
+  }
+});
+
+
+// --- CONFIGURACIÓN DE TAREA DE MANTENIMIENTO, CATEGORÍAS DE IMÁGENES, PRE-REGISTRO E IMÁGENES DE TAREA ---
+
+// Obtener valor configurable de mantenimiento
+app.get('/api/config/mantenimiento-value', requireAuth, async (req, res) => {
+  try {
+    const result = await db.query("SELECT value FROM system_settings WHERE key = 'mantenimiento_value'");
+    const value = result.rows.length > 0 ? parseFloat(result.rows[0].value) : 11.95;
+    res.json({ value });
+  } catch (e) {
+    res.status(500).json({ error: 'Error al consultar valor de mantenimiento.' });
+  }
+});
+
+// Guardar valor de mantenimiento (Admin)
+app.post('/api/config/mantenimiento-value', requireAuth, requireRole(['admin']), async (req, res) => {
+  const { value } = req.body;
+  if (value === undefined || isNaN(parseFloat(value))) {
+    return res.status(400).json({ error: 'Valor numérico requerido.' });
+  }
+  try {
+    await db.query(
+      `INSERT INTO system_settings (key, value, updated_at) VALUES ('mantenimiento_value', $1, NOW())
+       ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()`,
+      [value.toString()]
+    );
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: 'Error al guardar valor de mantenimiento.' });
+  }
+});
+
+// Obtener categorías de imágenes
+app.get('/api/config/image-categories', requireAuth, async (req, res) => {
+  try {
+    const result = await db.query("SELECT * FROM image_categories ORDER BY name");
+    res.json(result.rows);
+  } catch (e) {
+    res.status(500).json({ error: 'Error al obtener categorías de imágenes.' });
+  }
+});
+
+// Guardar categoría de imágenes (Admin)
+app.post('/api/config/image-categories', requireAuth, requireRole(['admin']), async (req, res) => {
+  const { name } = req.body;
+  if (!name) {
+    return res.status(400).json({ error: 'Nombre de categoría requerido.' });
+  }
+  try {
+    await db.query("INSERT INTO image_categories (name) VALUES ($1) ON CONFLICT (name) DO NOTHING", [name.trim()]);
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: 'Error al guardar la categoría.' });
+  }
+});
+
+// Eliminar categoría de imágenes (Admin)
+app.delete('/api/config/image-categories/:id', requireAuth, requireRole(['admin']), async (req, res) => {
+  try {
+    await db.query("DELETE FROM image_categories WHERE id = $1", [req.params.id]);
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: 'Error al eliminar la categoría.' });
+  }
+});
+
+// Listar tareas del equipo o generales
+app.get('/api/tasks/list/team', requireAuth, async (req, res) => {
+  try {
+    let query = '';
+    const params = [];
+    
+    if (req.session.userRole === 'tecnico') {
+      query = `
+        SELECT id, fecha, equipo, integrantes, ubicacion, puntos_totales_estimados, es_sin_exito, status, created_at 
+        FROM tasks 
+        WHERE equipo = $1 
+        ORDER BY fecha DESC, created_at DESC
+      `;
+      params.push(req.session.teamId);
+    } else {
+      query = `
+        SELECT id, fecha, equipo, integrantes, ubicacion, puntos_totales_estimados, es_sin_exito, status, created_at 
+        FROM tasks 
+        ORDER BY fecha DESC, created_at DESC
+      `;
+    }
+
+    const result = await db.query(query, params);
+    res.json(result.rows);
+  } catch (error) {
+    console.error("Error al obtener lista de tareas:", error);
+    res.status(500).json({ error: 'Error del servidor al obtener la lista de tareas.' });
+  }
+});
+
+// Obtener imágenes de una tarea
+app.get('/api/tasks/:taskId/images', requireAuth, async (req, res) => {
+  try {
+    const result = await db.query('SELECT * FROM task_images WHERE task_id = $1 ORDER BY created_at ASC', [req.params.taskId]);
+    res.json(result.rows);
+  } catch (error) {
+    res.status(500).json({ error: 'Error al obtener imágenes.' });
+  }
+});
+
+// Guardar imagen por punto de la tarea
+app.post('/api/tasks/:taskId/points/:pointId/images', requireAuth, upload.single('image'), async (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: 'No se recibió ninguna imagen.' });
+  }
+  const { taskId, pointId } = req.params;
+  const { title } = req.body;
+
+  try {
+    const taskCheck = await db.query('SELECT id FROM tasks WHERE id = $1', [taskId]);
+    if (taskCheck.rows.length === 0) {
+      await db.query(
+        `INSERT INTO tasks (id, fecha, equipo, integrantes, status, created_by) 
+         VALUES ($1, CURRENT_DATE, $2, $3, 'pendiente', $4) 
+         ON CONFLICT (id) DO NOTHING`,
+        [taskId, req.session.teamId || 'NetData 1', req.session.associatedMember || 'Técnico', req.session.userId]
+      );
+    }
+
+    const imagePath = `/uploads/${req.file.filename}`;
+    const result = await db.query(
+      `INSERT INTO task_images (task_id, point_id, image_path, title)
+       VALUES ($1, $2, $3, $4)
+       RETURNING *`,
+      [taskId, parseInt(pointId, 10), imagePath, title || null]
+    );
+
+    res.json({ success: true, image: result.rows[0] });
+  } catch (error) {
+    console.error("Error al guardar imagen de tarea:", error);
+    res.status(500).json({ error: 'Error al asociar imagen en base de datos.' });
+  }
+});
+
+// Eliminar imagen
+app.delete('/api/tasks/:taskId/images/:imageId', requireAuth, async (req, res) => {
+  try {
+    const { taskId, imageId } = req.params;
+    const imgResult = await db.query('SELECT image_path FROM task_images WHERE id = $1 AND task_id = $2', [imageId, taskId]);
+    if (imgResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Imagen no encontrada.' });
+    }
+
+    const imgPath = path.join(__dirname, 'public', imgResult.rows[0].image_path);
+    if (fs.existsSync(imgPath)) {
+      fs.unlinkSync(imgPath);
+    }
+
+    await db.query('DELETE FROM task_images WHERE id = $1', [imageId]);
+    res.json({ success: true });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error al eliminar la imagen.' });
+  }
+});
+
+// Pre-registrar tarea como Pendiente (desde el parser AI)
+app.post('/api/tasks/pre-register', requireAuth, async (req, res) => {
+  const { taskId, fecha, equipo, integrantes, ubicacion, parsedData } = req.body;
+  if (!taskId) {
+    return res.status(400).json({ error: 'ID de tarea requerido.' });
+  }
+
+  try {
+    const cleanTeam = equipo || req.session.teamId || 'NetData 1';
+    const cleanIntegrantes = integrantes || req.session.associatedMember || 'Técnico';
+    const cleanFecha = fecha || new Date().toISOString().split('T')[0];
+
+    await db.query(
+      `INSERT INTO tasks (
+        id, fecha, equipo, integrantes, ubicacion, descripcion_general, es_sin_exito, puntos_totales_estimados, status, created_by
+      ) VALUES (
+        $1, $2, $3, $4, $5, $6, false, 0.00, 'pendiente', $7
+      ) ON CONFLICT (id) DO UPDATE SET
+        fecha = EXCLUDED.fecha,
+        equipo = EXCLUDED.equipo,
+        integrantes = EXCLUDED.integrantes,
+        ubicacion = EXCLUDED.ubicacion`,
+      [taskId, cleanFecha, cleanTeam, cleanIntegrantes, ubicacion || null, 'Pre-registrado desde IA', req.session.userId]
+    );
+
+    if (parsedData) {
+      const p = parsedData;
+      const parseQuery = `
+        INSERT INTO task_parsed_data (
+          task_id, correctivo_id, codigo_tarea_externo, tipo_incidencia, estado, nivel_incidencia, fecha_registro,
+          cliente_id, cliente_nombre, cliente_telefono, producto, propietario_red, instrucciones_tecnicas, notas_operador,
+          sn_router, sn_cliente, direccion_instalacion, latitud, longitud, es_traslado, nueva_direccion,
+          nueva_latitud, nueva_longitud, coste_cierre, permanencia_meses, sugerencias_y_preguntas, raw_text
+        ) VALUES (
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27
+        ) ON CONFLICT (task_id) DO UPDATE SET
+          correctivo_id = EXCLUDED.correctivo_id,
+          codigo_tarea_externo = EXCLUDED.codigo_tarea_externo,
+          tipo_incidencia = EXCLUDED.tipo_incidencia,
+          estado = EXCLUDED.estado,
+          nivel_incidencia = EXCLUDED.nivel_incidencia,
+          fecha_registro = EXCLUDED.fecha_registro,
+          cliente_id = EXCLUDED.cliente_id,
+          cliente_nombre = EXCLUDED.cliente_nombre,
+          cliente_telefono = EXCLUDED.cliente_telefono,
+          producto = EXCLUDED.producto,
+          propietario_red = EXCLUDED.propietario_red,
+          instrucciones_tecnicas = EXCLUDED.instrucciones_tecnicas,
+          notas_operador = EXCLUDED.notas_operador,
+          sn_router = EXCLUDED.sn_router,
+          sn_cliente = EXCLUDED.sn_cliente,
+          direccion_instalacion = EXCLUDED.direccion_instalacion,
+          latitud = EXCLUDED.latitud,
+          longitud = EXCLUDED.longitud,
+          es_traslado = EXCLUDED.es_traslado,
+          nueva_direccion = EXCLUDED.nueva_direccion,
+          nueva_latitud = EXCLUDED.nueva_latitud,
+          nueva_longitud = EXCLUDED.nueva_longitud,
+          coste_cierre = EXCLUDED.coste_cierre,
+          permanencia_meses = EXCLUDED.permanencia_meses,
+          sugerencias_y_preguntas = EXCLUDED.sugerencias_y_preguntas,
+          raw_text = EXCLUDED.raw_text
+      `;
+      const parseParams = [
+        taskId,
+        p.identificacion_tarea?.correctivo_id || null,
+        p.identificacion_tarea?.codigo_tarea_externo || null,
+        p.identificacion_tarea?.tipo_incidencia || null,
+        p.identificacion_tarea?.estado || null,
+        p.identificacion_tarea?.nivel_incidencia || null,
+        p.identificacion_tarea?.fecha_registro || null,
+        p.cliente?.id || null,
+        p.cliente?.nombre || null,
+        p.cliente?.telefono || null,
+        p.servicio_contratado?.producto || null,
+        p.servicio_contratado?.propietario_red || null,
+        p.operativa_tecnica?.instrucciones_tecnicas || null,
+        p.operativa_tecnica?.notas_operador || null,
+        p.operativa_tecnica?.equipamiento?.sn_router || null,
+        p.operativa_tecnica?.equipamiento?.sn_cliente || null,
+        p.logistica_ubicacion?.direccion_instalacion || null,
+        p.logistica_ubicacion?.coordenadas_instalacion?.latitud || null,
+        p.logistica_ubicacion?.coordenadas_instalacion?.longitud || null,
+        !!p.logistica_ubicacion?.es_traslado,
+        p.logistica_ubicacion?.nueva_direccion || null,
+        p.logistica_ubicacion?.nuevas_coordenadas?.latitud || null,
+        p.logistica_ubicacion?.nuevas_coordenadas?.longitud || null,
+        p.condiciones_comerciales?.coste_cierre || null,
+        p.condiciones_comerciales?.permanencia_meses || null,
+        JSON.stringify(p.sugerencias_y_preguntas || []),
+        p.raw_text || null
+      ];
+      await db.query(parseQuery, parseParams);
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Error al pre-registrar tarea:", error);
+    res.status(500).json({ error: 'Error del servidor al pre-registrar la orden.' });
   }
 });
 
