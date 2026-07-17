@@ -415,7 +415,7 @@ app.post('/api/tasks', requireAuth, async (req, res) => {
     const query = `
       INSERT INTO tasks (
         id, fecha, equipo, integrantes, ubicacion, descripcion_general, es_sin_exito, puntos_totales_estimados,
-        por_encargo_activa, por_encargo_description, es_urgente_activa, es_urgente_descripcion,
+        por_encargo_activa, por_encargo_descripcion, es_urgente_activa, es_urgente_descripcion,
         tarea_mantenimiento_activa, tarea_mantenimiento_descripcion, tarea_mantenimiento_informacion,
         puntos_trabajo, gasto_material, informacion_adicional_material, cable_desplegado,
         sin_exito_motivo, sin_exito_visitas, sin_exito_direccion, sin_exito_informacion,
@@ -432,7 +432,7 @@ app.post('/api/tasks', requireAuth, async (req, res) => {
         es_sin_exito = EXCLUDED.es_sin_exito,
         puntos_totales_estimados = EXCLUDED.puntos_totales_estimados,
         por_encargo_activa = EXCLUDED.por_encargo_activa,
-        por_encargo_description = EXCLUDED.por_encargo_description,
+        por_encargo_descripcion = EXCLUDED.por_encargo_descripcion,
         es_urgente_activa = EXCLUDED.es_urgente_activa,
         es_urgente_descripcion = EXCLUDED.es_urgente_descripcion,
         tarea_mantenimiento_activa = EXCLUDED.tarea_mantenimiento_activa,
@@ -642,7 +642,7 @@ app.get('/api/tasks/:id', requireAuth, async (req, res) => {
         puntosTotalesEstimados: parseFloat(task.puntos_totales_estimados),
         porEncargo: {
           activa: task.por_encargo_activa,
-          descripcion: task.por_encargo_description
+          descripcion: task.por_encargo_descripcion
         },
         esUrgente: {
           activa: task.es_urgente_activa,

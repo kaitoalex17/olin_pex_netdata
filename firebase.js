@@ -105,7 +105,7 @@ async function saveTaskBackup(taskId, taskData) {
     puntosTotalesEstimados: parseFloat(taskData.puntosTotalesEstimados || taskData.puntos_totales_estimados || 0),
     porEncargo: {
       activa: !!(taskData.porEncargo?.activa || taskData.por_encargo_activa),
-      descripcion: taskData.porEncargo?.descripcion || taskData.por_encargo_description || ""
+      descripcion: taskData.porEncargo?.descripcion || taskData.por_encargo_descripcion || taskData.por_encargo_description || ""
     },
     esUrgente: {
       activa: !!(taskData.esUrgente?.activa || taskData.es_urgente_activa),
