@@ -90,20 +90,28 @@
   <!-- Navbar -->
   <header class="navbar">
     <div class="nav-brand">NET<span>DATA</span></div>
-    <ul class="nav-links">
+    
+    <div style="display: flex; align-items: center; gap: 0.75rem;">
+      <select id="themeSelector" style="background: rgba(0, 0, 0, 0.4); border: 1px solid var(--border-color); color: #fff; padding: 0.35rem 0.6rem; border-radius: var(--radius-sm); font-size: 0.8rem; cursor: pointer; outline: none; font-family: var(--font-sans); font-weight: 600;">
+        <option value="default">🌐 Cyber Neon</option>
+        <option value="midnight">🌌 Midnight Blue</option>
+        <option value="emerald">🌲 Emerald Forest</option>
+        <option value="sunset">🌅 Sunset Orchid</option>
+        <option value="carbon">🕶️ Stealth Carbon</option>
+      </select>
+      
+      <button type="button" class="menu-toggle" id="menuToggleBtn" aria-label="Abrir menú">
+        <span class="bar"></span>
+        <span class="bar"></span>
+        <span class="bar"></span>
+      </button>
+    </div>
+
+    <ul class="nav-links" id="navLinks">
       <li><a class="nav-link active" data-tab="formTab">Formulario</a></li>
       <li><a class="nav-link" data-tab="ordersTab" id="navOrdersLink">Órdenes</a></li>
       <li><a class="nav-link" data-tab="reportsTab" id="navReportsLink" style="display:none;">Informes</a></li>
       <li><a class="nav-link" data-tab="settingsTab" id="navSettingsLink" style="display:none;">Ajustes</a></li>
-      <li style="display: flex; align-items: center; margin-right: 0.5rem;">
-        <select id="themeSelector" style="background: rgba(0, 0, 0, 0.4); border: 1px solid var(--border-color); color: #fff; padding: 0.35rem 0.6rem; border-radius: var(--radius-sm); font-size: 0.8rem; cursor: pointer; outline: none; font-family: var(--font-sans); font-weight: 600;">
-          <option value="default">🌐 Cyber Neon</option>
-          <option value="midnight">🌌 Midnight Blue</option>
-          <option value="emerald">🌲 Emerald Forest</option>
-          <option value="sunset">🌅 Sunset Orchid</option>
-          <option value="carbon">🕶️ Stealth Carbon</option>
-        </select>
-      </li>
       <li><a class="nav-link logout" id="logoutLink">Salir</a></li>
     </ul>
   </header>

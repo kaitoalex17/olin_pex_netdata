@@ -1,4 +1,15 @@
 document.addEventListener('DOMContentLoaded', () => {
+  // Hamburger Menu elements
+  const menuToggleBtn = document.getElementById('menuToggleBtn');
+  const navLinksList = document.getElementById('navLinks');
+
+  if (menuToggleBtn && navLinksList) {
+    menuToggleBtn.addEventListener('click', () => {
+      menuToggleBtn.classList.toggle('active');
+      navLinksList.classList.toggle('active');
+    });
+  }
+
   // Navigation tabs switching
   const navLinks = document.querySelectorAll('.nav-link');
   const tabs = document.querySelectorAll('.spa-tab');
@@ -13,6 +24,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
       tabs.forEach(t => t.classList.remove('active'));
       document.getElementById(targetTab).classList.add('active');
+
+      // Cerrar menú responsivo si está abierto
+      if (menuToggleBtn && navLinksList) {
+        menuToggleBtn.classList.remove('active');
+        navLinksList.classList.remove('active');
+      }
 
       // Si entramos a ajustes, cargar datos frescos
       if (targetTab === 'settingsTab' && window.loadSettingsData) {
