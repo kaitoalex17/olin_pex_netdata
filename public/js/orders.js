@@ -10,13 +10,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (navOrdersLink) {
     navOrdersLink.addEventListener('click', () => {
-      // Activar pestaña
-      document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active'));
-      navOrdersLink.classList.add('active');
-
-      document.querySelectorAll('.spa-tab').forEach(tab => tab.style.display = 'none');
-      document.getElementById('ordersTab').style.display = 'block';
-
       loadOrdersList();
     });
   }
