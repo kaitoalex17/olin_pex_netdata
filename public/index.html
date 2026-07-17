@@ -318,17 +318,17 @@
 
         <!-- RESUMEN EXCEL -->
         <div style="margin-top: 2rem;">
-          <h2 style="font-family: var(--font-display); font-size: 1.25rem; color: var(--color-info); margin-bottom: 0.5rem;">Resumen de Puntos para Excel:</h2>
-          <textarea id="excelComment" rows="8" class="form-control" readonly placeholder="El resumen para Excel se mostrará aquí..."></textarea>
+          <h2 style="font-family: var(--font-display); font-size: 1.25rem; color: var(--color-info); margin-bottom: 0.5rem; display:none;">Resumen de Puntos para Excel:</h2>
+          <textarea id="excelComment" rows="8" class="form-control" readonly placeholder="El resumen para Excel se mostrará aquí..." style="display:none;"></textarea>
           
           <div style="display: grid; grid-template-columns: 1fr; gap: 0.75rem; margin-top: 1rem;" id="sharingContainer">
-            <button type="button" id="sendWhatsappCommentBtn" class="btn btn-secondary" style="background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.2); color: var(--color-success);">
+            <button type="button" id="sendWhatsappCommentBtn" class="btn btn-secondary" style="background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.2); color: var(--color-success); width: 100%;">
               Enviar por WhatsApp Comentario
             </button>
-            <button type="button" id="sendWhatsappExcelBtn" class="btn btn-secondary" style="background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.2); color: var(--color-success);">
+            <button type="button" id="sendWhatsappExcelBtn" class="btn btn-secondary" style="background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.2); color: var(--color-success); display:none;">
               Enviar por WhatsApp Excel
             </button>
-            <button type="button" id="copyToKeepBtn" class="btn btn-secondary">
+            <button type="button" id="copyToKeepBtn" class="btn btn-secondary" style="display:none;">
               Copiar para Google Keep
             </button>
           </div>

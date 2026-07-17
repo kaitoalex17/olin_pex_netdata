@@ -515,6 +515,10 @@ document.addEventListener('DOMContentLoaded', () => {
       <button type="button" class="btn btn-secondary add-concept-btn" style="width: 100%; margin-top:1rem; padding: 0.5rem; font-size:0.8rem;">
         + Agregar Concepto
       </button>
+      <div class="form-group" style="margin-top: 1rem; margin-bottom: 0;">
+        <label class="form-label" style="font-size:0.8rem; display:block; margin-bottom:0.25rem;">Comentario del Punto</label>
+        <input type="text" class="form-control point-comment" style="font-size:0.8rem; padding:0.4rem; background:rgba(0,0,0,0.25); color:#fff; border:1px solid var(--border-color);" placeholder="Comentario opcional para este punto (ej. Fusiones CTO 3)...">
+      </div>
     `;
 
     // Renderizar área de imágenes para este punto
@@ -622,6 +626,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (pointData) {
       locationSelect.value = pointData.ubicacion;
+      const commentInput = div.querySelector('.point-comment');
+      if (commentInput) {
+        commentInput.value = pointData.comentario || '';
+      }
       if (pointData.conceptos && pointData.conceptos.length > 0) {
         pointData.conceptos.forEach(c => addConceptRow(conceptsContainer, c));
       } else {
@@ -857,9 +865,11 @@ document.addEventListener('DOMContentLoaded', () => {
       payload.puntosTrabajo = [];
       const points = pointSectionsDiv.querySelectorAll('.point-item');
       points.forEach((item, index) => {
+        const ptCommentInput = item.querySelector('.point-comment');
         const pointObj = {
           id: index + 1,
           ubicacion: item.querySelector('.point-location').value,
+          comentario: ptCommentInput ? ptCommentInput.value.trim() : '',
           conceptos: []
         };
 
@@ -952,6 +962,9 @@ document.addEventListener('DOMContentLoaded', () => {
       const points = pointSectionsDiv.querySelectorAll('.point-item');
       points.forEach((item, index) => {
         const loc = item.querySelector('.point-location').value;
+        const ptCommentInput = item.querySelector('.point-comment');
+        const ptComment = ptCommentInput ? ptCommentInput.value.trim() : '';
+
         let ptContent = `Punto ${index + 1}${loc ? ` en ${loc}` : ''}\n`;
         let details = false;
 
@@ -967,6 +980,11 @@ document.addEventListener('DOMContentLoaded', () => {
             details = true;
           }
         });
+
+        if (ptComment) {
+          ptContent += `Comentario: ${ptComment}\n`;
+          details = true;
+        }
 
         if (details) comment += `${ptContent}---\n`;
       });
