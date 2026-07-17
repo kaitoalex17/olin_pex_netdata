@@ -20,7 +20,14 @@ CREATE TABLE IF NOT EXISTS teams (
 );
 
 -- 2. Usuarios
-CREATE TYPE user_role AS ENUM ('tecnico', 'gestor', 'coordinador', 'admin');
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'user_role') THEN
+        CREATE TYPE user_role AS ENUM ('tecnico', 'gestor', 'coordinador', 'admin');
+    END IF;
+END
+$$;
+
 CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
     email VARCHAR(255) UNIQUE NOT NULL,
