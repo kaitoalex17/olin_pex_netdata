@@ -64,32 +64,49 @@ function requireRole(roles) {
   };
 }
 
-// Inicializar Base de Datos en Arranque
+// Inicializar Base de Datos en Arranque con reintentos para esperar a Postgres
 async function initializeDatabase() {
   try {
     const sqlPath = path.join(__dirname, 'init-db.sql');
-    if (fs.existsSync(sqlPath)) {
-      const sql = fs.readFileSync(sqlPath, 'utf8');
-      await db.query(sql);
-      console.log("Esquema de base de datos cargado/verificado.");
-
-      // Verificar si existe el administrador predeterminado
-      const result = await db.query("SELECT * FROM users WHERE role = 'admin'");
-      if (result.rows.length === 0) {
-        const adminEmail = 'admin@instala.xyz';
-        const adminPass = 'AdminOlin2026!';
-        const hash = await bcrypt.hash(adminPass, 10);
-        await db.query(
-          "INSERT INTO users (email, password_hash, role, associated_member) VALUES ($1, $2, 'admin', 'Administrador')",
-          [adminEmail, hash]
-        );
-        console.log(`Usuario administrador por defecto creado: ${adminEmail} (Contraseña: ${adminPass})`);
-      }
-    } else {
+    if (!fs.existsSync(sqlPath)) {
       console.warn("No se encontró init-db.sql. Saltando inicialización.");
+      return;
+    }
+
+    const sql = fs.readFileSync(sqlPath, 'utf8');
+    const maxRetries = 15;
+    const retryDelay = 2000;
+
+    for (let i = 1; i <= maxRetries; i++) {
+      try {
+        // Ejecutar el SQL de inicialización
+        await db.query(sql);
+        console.log("Esquema de base de datos cargado/verificado con éxito.");
+
+        // Verificar si existe el administrador predeterminado
+        const result = await db.query("SELECT * FROM users WHERE role = 'admin'");
+        if (result.rows.length === 0) {
+          const adminEmail = 'admin@instala.xyz';
+          const adminPass = 'AdminOlin2026!';
+          const hash = await bcrypt.hash(adminPass, 10);
+          await db.query(
+            "INSERT INTO users (email, password_hash, role, associated_member) VALUES ($1, $2, 'admin', 'Administrador')",
+            [adminEmail, hash]
+          );
+          console.log(`Usuario administrador por defecto creado: ${adminEmail} (Contraseña: ${adminPass})`);
+        }
+        return; // Éxito, salir de la función
+      } catch (error) {
+        console.warn(`[Intento ${i}/${maxRetries}] La base de datos no está lista aún: ${error.message}`);
+        if (i === maxRetries) {
+          console.error("No se pudo conectar a la base de datos después de varios reintentos. Abortando inicialización.");
+          throw error;
+        }
+        await new Promise(resolve => setTimeout(resolve, retryDelay));
+      }
     }
   } catch (error) {
-    console.error("Error al inicializar la base de datos:", error);
+    console.error("Error crítico al inicializar la base de datos:", error.message);
   }
 }
 
