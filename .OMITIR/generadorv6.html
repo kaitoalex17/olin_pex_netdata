@@ -1,0 +1,1314 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NetData - Generador de Comentarios v12</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f2f5;
+            color: #333;
+        }
+
+        #generatedComment,
+        #excelComment {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            background-color: #e2e8f0;
+            border-left: 4px solid #3b82f6;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.9rem;
+        }
+
+        #loadingOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            flex-direction: column;
+            gap: 1rem;
+            transition: opacity 0.3s ease-in-out;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 10000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.4);
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            padding: 2rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            max-width: 400px;
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body class="p-4 sm:p-6 md:p-8 lg:p-10">
+    <div id="loadingOverlay">
+        <div class="spinner"></div>
+        <p class="text-lg font-medium text-gray-700">Cargando datos...</p>
+    </div>
+
+    <div id="alertModal" class="modal">
+        <div class="modal-content">
+            <p id="modalMessage" class="text-gray-800 mb-4"></p>
+            <button id="modalOkBtn"
+                class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg">OK</button>
+        </div>
+    </div>
+    <div id="confirmModal" class="modal">
+        <div class="modal-content">
+            <p id="confirmMessage" class="text-gray-800 mb-4"></p>
+            <div class="flex justify-center gap-4">
+                <button id="confirmYesBtn"
+                    class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded-lg">Sí</button>
+                <button id="confirmNoBtn"
+                    class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded-lg">No</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="taskExistsModal" class="modal">
+        <div class="modal-content">
+            <p id="taskExistsMessage" class="text-gray-800 mb-4 font-bold">¡Esta tarea ya está registrada!</p>
+            <p class="text-gray-700 mb-4">¿Desea cargar los datos de la tarea existente?</p>
+            <div class="flex justify-center gap-4">
+                <button id="loadTaskDataBtn"
+                    class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg">Sí, cargar</button>
+                <button id="keepEditingBtn"
+                    class="bg-gray-400 hover:bg-gray-500 text-white font-bold py-2 px-6 rounded-lg">No, continuar
+                    editando</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-4xl mx-auto bg-white p-6 md:p-8 rounded-lg shadow-xl">
+        <h1 class="text-3xl font-bold text-center text-blue-700 mb-8">Generador de Comentarios de Mantenimiento</h1>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div>
+                <label for="taskNumber" class="block text-sm font-medium text-gray-700 mb-1">Número de Tarea (ID
+                    Único):</label>
+                <input type="text" id="taskNumber"
+                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    placeholder="Ej: 108435">
+            </div>
+            <div>
+                <label for="taskDate" class="block text-sm font-medium text-gray-700 mb-1">Fecha:</label>
+                <input type="date" id="taskDate"
+                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+            </div>
+            <div>
+                <label for="equipoSelect" class="block text-sm font-medium text-gray-700 mb-1">Equipo Principal:</label>
+                <select id="equipoSelect"
+                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                    <option value="">Cargando equipos...</option>
+                </select>
+            </div>
+            <div>
+                <label for="teamNames" class="block text-sm font-medium text-gray-700 mb-1">Nombres del Equipo:</label>
+                <input type="text" id="teamNames"
+                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    placeholder="Se autocompletará" readonly>
+            </div>
+        </div>
+        <div class="mb-6">
+            <label for="ubicacionLocalizacion" class="block text-sm font-medium text-gray-700 mb-1">Ubicación o
+                Localización:</label>
+            <input type="text" id="ubicacionLocalizacion"
+                class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                placeholder="Ej: Torremolinos, Benalmádena">
+        </div>
+        <div class="mb-6">
+            <label for="generalDescription" class="block text-sm font-medium text-gray-700 mb-1">Observaciones Finales
+                (opcional):</label>
+            <textarea id="generalDescription" rows="2"
+                class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                placeholder="Ej: Se realiza tarea de mantenimiento"></textarea>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div class="p-4 border border-indigo-200 rounded-lg bg-indigo-50">
+                <div class="flex items-center mb-2">
+                    <input type="checkbox" id="encargoCheckbox"
+                        class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+                    <label for="encargoCheckbox" class="ml-2 block text-sm font-medium text-gray-700">Tarea por
+                        encargo</label>
+                </div>
+                <div id="encargoSection" class="hidden space-y-2">
+                    <p class="text-xs text-gray-600">Tarea propuesta por encargado o jefe de la empresa.</p>
+                    <textarea id="encargoDescription" rows="2"
+                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 sm:text-sm"
+                        placeholder="Descripción (opcional)"></textarea>
+                </div>
+            </div>
+            <div class="p-4 border border-pink-200 rounded-lg bg-pink-50">
+                <div class="flex items-center mb-2">
+                    <input type="checkbox" id="urgenteCheckbox"
+                        class="h-4 w-4 text-pink-600 focus:ring-pink-500 border-gray-300 rounded">
+                    <label for="urgenteCheckbox" class="ml-2 block text-sm font-medium text-gray-700">Tarea
+                        URGENTE</label>
+                </div>
+                <div id="urgenteSection" class="hidden space-y-2">
+                    <textarea id="urgenteDescription" rows="2"
+                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-pink-500 sm:text-sm"
+                        placeholder="Motivo de la urgencia (opcional)"></textarea>
+                </div>
+            </div>
+        </div>
+
+        <div class="mb-6 p-4 border border-teal-200 rounded-lg bg-teal-50">
+            <div class="flex items-center mb-3">
+                <input type="checkbox" id="jointTaskCheckbox"
+                    class="h-4 w-4 text-teal-600 focus:ring-teal-500 border-gray-300 rounded">
+                <label for="jointTaskCheckbox" class="ml-2 block text-sm font-medium text-gray-700">Tarea en
+                    conjunto</label>
+            </div>
+            <div id="jointTaskSection" class="hidden space-y-3">
+                <label for="secondaryTeamSelect" class="block text-sm font-medium text-gray-700 mb-1">Segundo Equipo
+                    Participante:</label>
+                <select id="secondaryTeamSelect"
+                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-teal-500 focus:border-teal-500 sm:text-sm">
+                    <option value="">Cargando equipos...</option>
+                </select>
+                <label for="proportionSelect" class="block text-sm font-medium text-gray-700 mb-1">Proporción de Puntos
+                    (Principal - Secundario):</label>
+                <select id="proportionSelect"
+                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-teal-500 focus:border-teal-500 sm:text-sm">
+                    <option value="50-50">50% - 50%</option>
+                    <option value="75-25">75% - 25%</option>
+                    <option value="25-75">25% - 75%</option>
+                    <option value="33-67">33% - 67%</option>
+                    <option value="67-33">67% - 33%</option>
+                </select>
+                <p class="text-xs text-gray-600 mt-1">
+                    El valor de la izquierda (%) se asignará a esta tarea. Se creará una nueva tarea (ID terminado en
+                    'A') para el segundo equipo con el valor de la derecha (%).
+                </p>
+            </div>
+        </div>
+
+        <div class="mb-6 p-4 border border-yellow-200 rounded-lg bg-yellow-50">
+            <div class="flex items-center mb-3">
+                <input type="checkbox" id="tareaMantenimientoCheckbox"
+                    class="h-4 w-4 text-yellow-600 focus:ring-yellow-500 border-gray-300 rounded">
+                <label for="tareaMantenimientoCheckbox" class="ml-2 block text-sm font-medium text-gray-700">Tarea de
+                    Mantenimiento</label>
+            </div>
+            <div id="tareaMantenimientoSection" class="hidden space-y-3">
+                <label for="tareaMantenimientoDesc" class="block text-sm font-medium text-gray-700 mb-1">Descripción de
+                    la Tarea de Mantenimiento:</label>
+                <textarea id="tareaMantenimientoDesc" rows="2"
+                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-yellow-500 focus:border-yellow-500 sm:text-sm"
+                    placeholder="Ej: Remplazo de TO96 a CTO"></textarea>
+                <label for="adicionalTareaMantenimiento"
+                    class="block text-sm font-medium text-gray-700 mb-1">Información Adicional:</label>
+                <textarea id="adicionalTareaMantenimiento" rows="2"
+                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-yellow-500 focus:border-yellow-500 sm:text-sm"
+                    placeholder="Ej: Se requiere revisión futura"></textarea>
+            </div>
+        </div>
+
+        <div class="mb-6 p-4 border border-red-200 rounded-lg bg-red-50">
+            <div class="flex items-center mb-3">
+                <input type="checkbox" id="sinExitoCheckbox"
+                    class="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded">
+                <label for="sinExitoCheckbox" class="ml-2 block text-sm font-medium text-gray-700">SIN ÉXITO (No
+                    Iniciada)</label>
+            </div>
+            <div id="sinExitoSection" class="hidden space-y-3">
+                <label for="sinExitoMotivo" class="block text-sm font-medium text-gray-700 mb-1">Motivo de no
+                    inicio:</label>
+                <select id="sinExitoMotivo"
+                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 sm:text-sm">
+                    <option value="">Selecciona un motivo</option>
+                    <option value="Falta de permiso">Falta de permiso</option>
+                    <option value="Falta de permiso de fachada">Falta de permiso de fachada</option>
+                    <option value="Falta de permiso de ayuntamiento">Falta de permiso de ayuntamiento</option>
+                    <option value="Canalizado obstruido">Canalizado obstruido</option>
+                    <option value="No hay acceso a la propiedad o al riti / falta llaves">No hay acceso a la propiedad o
+                        al riti / falta llaves</option>
+                    <option value="Cliente cancela">Cliente cancela</option>
+                    <option value="Vehículo sobre la arqueta o cámara">Vehículo sobre la arqueta o cámara</option>
+                    <option value="Dirección errónea">Dirección errónea</option>
+                    <option value="Trabajo mal planteado en oficina">Trabajo mal planteado en oficina</option>
+                    <option value="Otros">Otros</option>
+                </select>
+                <div id="sinExitoOtroDiv" class="hidden mt-3">
+                    <label for="sinExitoOtroInput" class="block text-sm font-medium text-gray-700 mb-1">Especificar
+                        motivo:</label>
+                    <input type="text" id="sinExitoOtroInput"
+                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-red-500 sm:text-sm"
+                        placeholder="Escribe el motivo aquí">
+                </div>
+                <div id="direccionDiv" class="hidden mt-3">
+                    <label for="direccionFachada" class="block text-sm font-medium text-gray-700 mb-1">Dirección de la
+                        fachada:</label>
+                    <input type="text" id="direccionFachada"
+                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 sm:text-sm"
+                        placeholder="Escribe la dirección aquí">
+                </div>
+                <label for="adicionalSinExito" class="block text-sm font-medium text-gray-700 mb-1">Información
+                    Adicional:</label>
+                <textarea id="adicionalSinExito" rows="2"
+                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 sm:text-sm"
+                    placeholder="Ej: Hablar con el técnico encargado"></textarea>
+                <div class="mt-3">
+                    <label for="visitasSinExito" class="block text-sm font-medium text-gray-700 mb-1">Número de
+                        visitas:</label>
+                    <input type="number" id="visitasSinExito"
+                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 sm:text-sm"
+                        min="1" value="1">
+                </div>
+            </div>
+        </div>
+
+        <div id="pointSections" class="space-y-6 mb-8 p-4 border border-blue-200 rounded-lg bg-blue-50">
+            <h2 class="text-lg font-semibold text-blue-800 mb-4">Puntos de Trabajo</h2>
+        </div>
+        <button id="addPointBtn"
+            class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-md shadow-md transition duration-300 ease-in-out mb-8">
+            Agregar Punto
+        </button>
+
+        <div class="mb-8 p-4 border border-purple-200 rounded-lg bg-purple-50">
+            <div class="flex items-center mb-3">
+                <input type="checkbox" id="cableCheckbox"
+                    class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded">
+                <label for="cableCheckbox" class="ml-2 block text-sm font-medium text-gray-700">Despliegue de
+                    Cable</label>
+            </div>
+            <div id="cableExpenseSection" class="hidden space-y-4">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-md font-semibold text-purple-800">Metros de Cable:</h3>
+                    <span id="totalCableMeters" class="text-xl font-bold text-purple-600">0.00 m</span>
+                </div>
+                <div id="cableInputsContainer" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                </div>
+                <label for="adicionalCable" class="block text-sm font-medium text-gray-700 mb-1">Información Adicional
+                    (No se guarda en BD):</label>
+                <textarea id="adicionalCable" rows="2"
+                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm"
+                    placeholder="Ej: Se utiliza cable de exterior para la fachada"></textarea>
+            </div>
+        </div>
+
+        <div class="mb-8 p-4 border border-orange-200 rounded-lg bg-orange-50">
+            <div class="flex items-center mb-3">
+                <input type="checkbox" id="gastoMaterialCheckbox"
+                    class="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded">
+                <label for="gastoMaterialCheckbox" class="ml-2 block text-sm font-medium text-gray-700">Gasto
+                    Material</label>
+            </div>
+            <div id="materialExpenseSection" class="hidden space-y-3">
+                <h3 class="text-md font-semibold text-orange-800 mb-2">Detalles de Gasto de Material:</h3>
+                <div id="materialInputsContainer" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <p class="col-span-2 text-gray-500">Cargando materiales desde la base de datos...</p>
+                </div>
+                <label for="adicionalMaterial" class="block text-sm font-medium text-gray-700 mb-1">Información
+                    Adicional:</label>
+                <textarea id="adicionalMaterial" rows="2"
+                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-orange-500 focus:border-orange-500 sm:text-sm"
+                    placeholder="Ej: Se usaron 2 conectores extra por error"></textarea>
+            </div>
+        </div>
+
+        <div class="mt-8 p-4 bg-gray-100 rounded-lg shadow-inner">
+            <h2 class="text-xl font-bold text-gray-800 text-center">Puntos Totales de la Tarea:</h2>
+            <p id="totalPointsDisplay" class="text-3xl font-extrabold text-blue-600 text-center mt-2">0.00</p>
+        </div>
+
+        <div class="mt-8 space-y-4">
+            <button id="saveTaskBtn"
+                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-md shadow-lg transition duration-300 ease-in-out transform hover:scale-105">
+                Guardar Tarea en Base de Datos
+            </button>
+            <button id="generateCommentBtn"
+                class="w-full bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-4 rounded-md shadow-lg transition duration-300 ease-in-out">
+                Generar/Actualizar Comentario
+            </button>
+            <a href="../dashboard.php"
+                class="block w-full text-center bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-md shadow-lg transition duration-300 ease-in-out">
+                Volver al Dashboard Principal
+            </a>
+            <a href="index.php"
+                class="block w-full text-center bg-gray-400 hover:bg-gray-500 text-white font-bold py-3 px-4 rounded-md shadow-lg transition duration-300 ease-in-out">
+                Volver al Menú PEX
+            </a>
+        </div>
+
+        <div class="mt-10">
+            <h2 class="text-xl font-bold text-gray-800 mb-4 text-center">Comentario para Tarea:</h2>
+            <div id="generatedComment"></div>
+            <button id="copyCommentBtn"
+                class="mt-4 w-full bg-gray-700 hover:bg-gray-800 text-white font-bold py-2 px-4 rounded-md shadow-md transition duration-300 ease-in-out hidden">
+                Copiar Comentario
+            </button>
+        </div>
+        <div class="mt-8">
+            <h2 class="text-xl font-bold text-gray-800 mb-4 text-center">Resumen para Excel (Puntos):</h2>
+            <textarea id="excelComment" rows="10" class="mt-1 block w-full" readonly></textarea>
+            <div class="flex flex-col md:flex-row gap-4 mt-4">
+                <button id="sendWhatsappCommentBtn"
+                    class="flex-1 bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-md shadow-lg transition duration-300 ease-in-out transform hover:scale-105">
+                    Enviar por WhatsApp Comentario
+                </button>
+                <button id="sendWhatsappExcelBtn"
+                    class="flex-1 bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-md shadow-lg transition duration-300 ease-in-out transform hover:scale-105">
+                    Enviar por WhatsApp Resumen Excel
+                </button>
+                <button id="copyToKeepBtn"
+                    class="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-md shadow-lg transition duration-300 ease-in-out transform hover:scale-105">
+                    Copiar para Google Keep
+                </button>
+            </div>
+        </div>
+    </div>
+    <script type="module">
+        // Importar funciones de Firebase v10
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+        import { getFirestore, collection, getDocs, doc, setDoc, serverTimestamp, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+        // --- CONFIGURACIÓN DE FIREBASE ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyBcODDLwTnFOBDh2XoyUkLdzE5wzYBNauo",
+            authDomain: "calculadora-olin.firebaseapp.com",
+            projectId: "calculadora-olin",
+            storageBucket: "calculadora-olin.appspot.com",
+            messagingSenderId: "1010425618747",
+            appId: "1:1010425618747:web:bb3ea318d3481474e4171e",
+            measurementId: "G-XMFYD17YB1"
+        };
+
+        // Inicializar Firebase
+        let app;
+        let db;
+        let auth;
+        let userId;
+
+        async function initFirebase() {
+            try {
+                if (!app) {
+                    app = initializeApp(firebaseConfig);
+                    db = getFirestore(app);
+                    auth = getAuth(app);
+                }
+                await signInAnonymously(auth);
+                userId = auth.currentUser.uid;
+                console.log("Conectado a Firebase de forma anónima.");
+                return true;
+            } catch (error) {
+                console.error("Error al inicializar Firebase:", error);
+                showAlert("No se pudo conectar a la base de datos. Por favor, intente recargar la página.");
+                return false;
+            }
+        }
+
+        // --- LÓGICA DE MODALES PERSONALIZADOS ---
+        const alertModal = document.getElementById('alertModal');
+        const modalMessage = document.getElementById('modalMessage');
+        const modalOkBtn = document.getElementById('modalOkBtn');
+        const confirmModal = document.getElementById('confirmModal');
+        const confirmMessage = document.getElementById('confirmMessage');
+        const confirmYesBtn = document.getElementById('confirmYesBtn');
+        const confirmNoBtn = document.getElementById('confirmNoBtn');
+        const taskExistsModal = document.getElementById('taskExistsModal');
+        const loadTaskDataBtn = document.getElementById('loadTaskDataBtn');
+        const keepEditingBtn = document.getElementById('keepEditingBtn');
+        let confirmResolver;
+
+        function showAlert(message) {
+            modalMessage.textContent = message;
+            alertModal.style.display = 'flex';
+        }
+
+        modalOkBtn.addEventListener('click', () => {
+            alertModal.style.display = 'none';
+        });
+
+        function showConfirm(message) {
+            confirmMessage.textContent = message;
+            confirmModal.style.display = 'flex';
+            return new Promise(resolve => {
+                confirmResolver = resolve;
+            });
+        }
+
+        confirmYesBtn.addEventListener('click', () => {
+            confirmModal.style.display = 'none';
+            if (confirmResolver) confirmResolver(true);
+        });
+
+        confirmNoBtn.addEventListener('click', () => {
+            confirmModal.style.display = 'none';
+            if (confirmResolver) confirmResolver(false);
+        });
+
+        window.alert = showAlert;
+        window.confirm = showConfirm;
+
+        // --- REFERENCIAS A ELEMENTOS DEL DOM ---
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        const equipoSelect = document.getElementById('equipoSelect');
+        const teamNamesInput = document.getElementById('teamNames');
+        const materialInputsContainer = document.getElementById('materialInputsContainer');
+        const cableInputsContainer = document.getElementById('cableInputsContainer');
+        const saveTaskBtn = document.getElementById('saveTaskBtn');
+        const generateCommentBtn = document.getElementById('generateCommentBtn');
+        const addPointBtn = document.getElementById('addPointBtn');
+        const pointSectionsDiv = document.getElementById('pointSections');
+        const copyCommentBtn = document.getElementById('copyCommentBtn');
+        const generatedCommentDiv = document.getElementById('generatedComment');
+        const excelCommentTextarea = document.getElementById('excelComment');
+        const tareaMantenimientoCheckbox = document.getElementById('tareaMantenimientoCheckbox');
+        const tareaMantenimientoSection = document.getElementById('tareaMantenimientoSection');
+        const gastoMaterialCheckbox = document.getElementById('gastoMaterialCheckbox');
+        const materialExpenseSection = document.getElementById('materialExpenseSection');
+        const cableCheckbox = document.getElementById('cableCheckbox');
+        const cableExpenseSection = document.getElementById('cableExpenseSection');
+        const sinExitoCheckbox = document.getElementById('sinExitoCheckbox');
+        const sinExitoSection = document.getElementById('sinExitoSection');
+        const sinExitoMotivoSelect = document.getElementById('sinExitoMotivo');
+        const sinExitoOtroDiv = document.getElementById('sinExitoOtroDiv');
+        const direccionDiv = document.getElementById('direccionDiv');
+        const totalPointsDisplay = document.getElementById('totalPointsDisplay');
+        const taskNumberInput = document.getElementById('taskNumber');
+        const totalCableMetersSpan = document.getElementById('totalCableMeters');
+        // Nuevos elementos
+        const encargoCheckbox = document.getElementById('encargoCheckbox');
+        const encargoSection = document.getElementById('encargoSection');
+        const urgenteCheckbox = document.getElementById('urgenteCheckbox');
+        const urgenteSection = document.getElementById('urgenteSection');
+        const jointTaskCheckbox = document.getElementById('jointTaskCheckbox');
+        const jointTaskSection = document.getElementById('jointTaskSection');
+        const secondaryTeamSelect = document.getElementById('secondaryTeamSelect');
+        const proportionSelect = document.getElementById('proportionSelect');
+
+        // --- VARIABLES GLOBALES PARA DATOS DE FIRESTORE ---
+        let conceptPoints = {};
+        let commonConcepts = [];
+        let netDataTeams = {};
+        let cableTypes = [];
+
+        // --- CARGA DE DATOS INICIAL ---
+        document.addEventListener('DOMContentLoaded', async () => {
+            const isFirebaseReady = await initFirebase();
+            if (isFirebaseReady) {
+                try {
+                    await Promise.all([loadTeams(), loadConcepts(), loadMaterials(), loadCables()]);
+                    addPointSection();
+                    loadCableInputs();
+                    setDefaultDate();
+                    document.addEventListener('change', updatePointsDisplay);
+                    document.addEventListener('input', updatePointsDisplay);
+                } catch (error) {
+                    console.error("Error cargando datos iniciales: ", error);
+                    showAlert("No se pudieron cargar los datos de configuración desde la base de datos.");
+                } finally {
+                    loadingOverlay.style.opacity = '0';
+                    setTimeout(() => loadingOverlay.style.display = 'none', 300);
+                }
+            }
+        });
+
+        async function loadCollectionData(collectionName) {
+            const snapshot = await getDocs(collection(db, collectionName));
+            return snapshot;
+        }
+
+        async function loadTeams() {
+            const teamsSnapshot = await loadCollectionData("equipos");
+            const optionsHtml = ['<option value="">Selecciona un equipo</option>'];
+            teamsSnapshot.forEach(doc => {
+                const team = doc.data();
+                optionsHtml.push(`<option value="${doc.id}">${doc.id}</option>`);
+                netDataTeams[doc.id] = team;
+            });
+            equipoSelect.innerHTML = optionsHtml.join('');
+            secondaryTeamSelect.innerHTML = optionsHtml.join('');
+        }
+
+        async function loadConcepts() {
+            const conceptsSnapshot = await loadCollectionData("conceptos");
+            let concepts = [];
+            conceptsSnapshot.forEach(doc => concepts.push({ id: doc.id, ...doc.data() }));
+            concepts.sort((a, b) => (a.orden || 999) - (b.orden || 999) || a.id.localeCompare(b.id));
+            commonConcepts = concepts.map(c => c.id);
+            concepts.forEach(c => { conceptPoints[c.id] = c.valorPuntos; });
+            conceptPoints['Tarea de Mantenimiento'] = 11.95;
+        }
+
+        async function loadCables() {
+            const cablesSnapshot = await loadCollectionData("ConceptoCable");
+            cablesSnapshot.forEach(doc => {
+                const cable = doc.data();
+                const name = doc.id;
+                const points = cable.puntos;
+                cableTypes.push({ id: name, nombre: cable.nombre, points: points });
+                conceptPoints[`${cable.nombre} (${points} pts/m)`] = points;
+            });
+            cableTypes.sort((a, b) => a.nombre.localeCompare(b.nombre));
+        }
+
+        async function loadMaterials() {
+            const materialsSnapshot = await loadCollectionData("materiales");
+            materialInputsContainer.innerHTML = '';
+            let materials = [];
+            materialsSnapshot.forEach(doc => materials.push({ id: doc.id, ...doc.data() }));
+            materials.sort((a, b) => (a.orden || 999) - (b.orden || 999) || a.id.localeCompare(b.id));
+            materials.forEach(material => {
+                const div = document.createElement('div');
+                div.innerHTML = `
+                    <label for="material-${material.id}" class="block text-sm font-medium text-gray-700">${material.id} (unidades):</label>
+                    <input type="number" id="material-${material.id}" data-material-name="${material.id}" class="material-input mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-orange-500 focus:border-orange-500 sm:text-sm" min="0">
+                `;
+                materialInputsContainer.appendChild(div);
+            });
+        }
+
+        function loadCableInputs() {
+            cableInputsContainer.innerHTML = '';
+            cableTypes.forEach(cable => {
+                const div = document.createElement('div');
+                div.classList.add('flex', 'flex-col', 'gap-2');
+                div.innerHTML = `
+                    <label class="block text-sm font-medium text-gray-700">${cable.nombre} (metros):</label>
+                    <div class="flex items-center gap-2">
+                        <input type="number" data-cable-type="${cable.id}" data-cable-points="${cable.points}" class="cable-input mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 sm:text-sm" min="0">
+                        <button type="button" class="calculate-meters-btn bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-3 rounded-md shadow-md text-xs">Calc</button>
+                    </div>
+                `;
+                cableInputsContainer.appendChild(div);
+
+                const calculateBtn = div.querySelector('.calculate-meters-btn');
+                calculateBtn.addEventListener('click', () => {
+                    const meters = prompt("Calculadora de Metros\nIntroduce el inicio de cable y el final, separados por una coma (ej: 100,250):");
+                    if (meters) {
+                        const parts = meters.split(',').map(m => parseFloat(m.trim()));
+                        if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+                            const result = Math.abs(parts[1] - parts[0]);
+                            div.querySelector('.cable-input').value = result.toFixed(2);
+                            updatePointsDisplay();
+                        } else {
+                            showAlert("Formato incorrecto. Por favor, introduce dos números separados por una coma.");
+                        }
+                    }
+                });
+            });
+        }
+
+        function setDefaultDate() {
+            document.getElementById('taskDate').value = new Date().toISOString().split('T')[0];
+        }
+
+        // --- LÓGICA DE LA INTERFAZ Y EVENTOS ---
+        equipoSelect.addEventListener('change', () => {
+            const selectedTeam = netDataTeams[equipoSelect.value];
+            teamNamesInput.value = selectedTeam ? selectedTeam.integrantes || '' : '';
+        });
+        taskNumberInput.addEventListener('change', checkTaskExistence);
+        addPointBtn.addEventListener('click', () => addPointSection());
+
+        // Nuevos Event Listeners
+        encargoCheckbox.addEventListener('change', () => encargoSection.classList.toggle('hidden', !encargoCheckbox.checked));
+        urgenteCheckbox.addEventListener('change', () => urgenteSection.classList.toggle('hidden', !urgenteCheckbox.checked));
+        jointTaskCheckbox.addEventListener('change', () => {
+            jointTaskSection.classList.toggle('hidden', !jointTaskCheckbox.checked);
+            updatePointsDisplay();
+        });
+        proportionSelect.addEventListener('change', updatePointsDisplay);
+
+        tareaMantenimientoCheckbox.addEventListener('change', () => {
+            tareaMantenimientoSection.classList.toggle('hidden', !tareaMantenimientoCheckbox.checked);
+            updatePointsDisplay();
+        });
+        gastoMaterialCheckbox.addEventListener('change', () => materialExpenseSection.classList.toggle('hidden', !gastoMaterialCheckbox.checked));
+        cableCheckbox.addEventListener('change', () => {
+            cableExpenseSection.classList.toggle('hidden', !cableCheckbox.checked);
+            updatePointsDisplay();
+        });
+
+        // Lógica de exclusión mutua para Sin Éxito
+        sinExitoCheckbox.addEventListener('change', () => {
+            const isChecked = sinExitoCheckbox.checked;
+            sinExitoSection.classList.toggle('hidden', !isChecked);
+            togglePointEntry(isChecked);
+        });
+
+        function togglePointEntry(isDisabled) {
+            if (isDisabled) {
+                tareaMantenimientoCheckbox.checked = false;
+                tareaMantenimientoCheckbox.disabled = true;
+                tareaMantenimientoSection.classList.add('hidden');
+                gastoMaterialCheckbox.checked = false;
+                gastoMaterialCheckbox.disabled = true;
+                materialExpenseSection.classList.add('hidden');
+                cableCheckbox.checked = false;
+                cableCheckbox.disabled = true;
+                cableExpenseSection.classList.add('hidden');
+                pointSectionsDiv.innerHTML = `<h2 class="text-lg font-semibold text-blue-800 mb-4">Puntos de Trabajo</h2><p class="text-gray-500">No aplica en tareas "SIN ÉXITO".</p>`;
+                addPointBtn.disabled = true;
+            } else {
+                tareaMantenimientoCheckbox.disabled = false;
+                gastoMaterialCheckbox.disabled = false;
+                cableCheckbox.disabled = false;
+                pointSectionsDiv.innerHTML = `<h2 class="text-lg font-semibold text-blue-800 mb-4">Puntos de Trabajo</h2>`;
+                addPointSection();
+                addPointBtn.disabled = false;
+            }
+            updatePointsDisplay();
+        }
+
+        sinExitoMotivoSelect.addEventListener('change', () => {
+            sinExitoOtroDiv.classList.toggle('hidden', sinExitoMotivoSelect.value !== 'Otros');
+            direccionDiv.classList.toggle('hidden', sinExitoMotivoSelect.value !== 'Falta de permiso de fachada');
+        });
+
+        loadTaskDataBtn.addEventListener('click', loadExistingTaskData);
+        keepEditingBtn.addEventListener('click', () => {
+            taskExistsModal.style.display = 'none';
+        });
+
+        let pointCount = 0;
+        function addPointSection(pointData = null) {
+            pointCount++;
+            const pointDiv = document.createElement('div');
+            pointDiv.id = `point-item-${pointCount}`;
+            pointDiv.classList.add('point-item', 'p-4', 'border', 'border-blue-300', 'rounded-md', 'bg-white', 'shadow-sm', 'mb-4');
+            pointDiv.innerHTML = `
+                <div class="flex justify-between items-center mb-3">
+                    <label class="block text-sm font-medium text-gray-700">Punto ${pointCount}:</label>
+                    <button type="button" class="remove-point-btn bg-red-500 hover:bg-red-600 text-white text-xs font-bold py-1 px-2 rounded-md">Eliminar Punto</button>
+                </div>
+                <div class="mb-3">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Ubicación:</label>
+                    <select class="point-location mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 sm:text-sm">
+                        <option value="">Selecciona ubicación</option>
+                        <option value="poste">poste</option> <option value="arqueta">arqueta</option> <option value="fachada">fachada</option>
+                        <option value="riti">riti</option> <option value="interior">interior</option> <option value="camara">camara</option>
+                        <option value="monolito">monolito</option> <option value="otros">otros</option>
+                    </select>
+                </div>
+                <label class="block text-sm font-medium text-gray-700 mt-3 mb-1">Detalles:</label>
+                <div class="point-details-container space-y-2"></div>
+                <button type="button" class="add-concept-btn mt-3 bg-blue-500 hover:bg-blue-600 text-white text-xs font-bold py-1 px-2 rounded-md">Agregar Detalle</button>
+            `;
+            pointSectionsDiv.appendChild(pointDiv);
+            pointDiv.querySelector('.remove-point-btn').addEventListener('click', () => { pointDiv.remove(); updatePointTitles(); updatePointsDisplay(); });
+            const detailsContainer = pointDiv.querySelector('.point-details-container');
+            pointDiv.querySelector('.add-concept-btn').addEventListener('click', () => addConceptRow(detailsContainer));
+
+            if (pointData) {
+                pointDiv.querySelector('.point-location').value = pointData.ubicacion;
+                pointData.conceptos.forEach(concept => addConceptRow(detailsContainer, concept));
+            } else {
+                addConceptRow(detailsContainer);
+            }
+        }
+
+        function updatePointTitles() {
+            const pointItems = document.querySelectorAll('.point-item');
+            pointItems.forEach((item, index) => {
+                item.querySelector('label').textContent = `Punto ${index + 1}:`;
+            });
+            pointCount = pointItems.length;
+        }
+
+        function addConceptRow(detailsContainer, conceptData = null) {
+            const conceptRowDiv = document.createElement('div');
+            conceptRowDiv.classList.add('flex', 'items-center', 'gap-2', 'mb-2');
+            const conceptOptions = commonConcepts.map(concept => `<option value="${concept}">${concept}</option>`).join('');
+            conceptRowDiv.innerHTML = `
+                <select class="concept-select mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 sm:text-sm">
+                    <option value="">Selecciona un concepto</option> ${conceptOptions} <option value="Otro">Otro</option>
+                </select>
+                <input type="number" class="quantity-input mt-1 block px-3 py-2 w-20 border-gray-300 rounded-md shadow-sm" min="1" value="1">
+                <input type="text" class="other-concept-input mt-1 block hidden w-full border-gray-300 rounded-md shadow-sm" placeholder="Escribe el concepto">
+                <button type="button" class="remove-concept-btn bg-red-500 hover:bg-red-600 text-white text-xs font-bold py-1 px-2 rounded-md">X</button>
+            `;
+            detailsContainer.appendChild(conceptRowDiv);
+            const conceptSelect = conceptRowDiv.querySelector('.concept-select');
+            const otherInput = conceptRowDiv.querySelector('.other-concept-input');
+            const quantityInput = conceptRowDiv.querySelector('.quantity-input');
+
+            conceptSelect.addEventListener('change', () => otherInput.classList.toggle('hidden', conceptSelect.value !== 'Otro'));
+
+            if (conceptData) {
+                if (commonConcepts.includes(conceptData.nombre)) {
+                    conceptSelect.value = conceptData.nombre;
+                } else {
+                    conceptSelect.value = 'Otro';
+                    otherInput.classList.remove('hidden');
+                    otherInput.value = conceptData.nombre;
+                }
+                quantityInput.value = conceptData.cantidad;
+            }
+
+            conceptRowDiv.querySelector('.remove-concept-btn').addEventListener('click', () => {
+                conceptRowDiv.remove();
+                updatePointsDisplay();
+            });
+        }
+
+        function updatePointsDisplay() {
+            let { totalOverallPoints, totalCableMeters } = getAggregatedConceptsAndPoints();
+            let displayPoints = totalOverallPoints;
+
+            if (jointTaskCheckbox.checked) {
+                const [primaryPercent] = proportionSelect.value.split('-').map(Number);
+                displayPoints = totalOverallPoints * (primaryPercent / 100);
+            }
+
+            totalPointsDisplay.textContent = `${displayPoints.toFixed(2)}`;
+            totalCableMetersSpan.textContent = `${totalCableMeters.toFixed(2)} m`;
+        }
+
+        // --- LÓGICA DE CARGA DE TAREAS ---
+        async function checkTaskExistence() {
+            const taskNumber = taskNumberInput.value.trim();
+            if (!taskNumber) return;
+
+            const docRef = doc(db, `datosv3/${taskNumber}`);
+            const docSnap = await getDoc(docRef);
+
+            if (docSnap.exists()) {
+                window.existingTaskData = docSnap.data();
+                taskExistsModal.style.display = 'flex';
+            }
+        }
+
+        function loadExistingTaskData() {
+            const data = window.existingTaskData;
+            if (!data) return;
+
+            taskExistsModal.style.display = 'none';
+            resetForm();
+
+            // Cargar datos principales
+            document.getElementById('taskDate').value = data.fecha;
+            equipoSelect.value = data.equipo;
+            teamNamesInput.value = data.integrantes;
+            document.getElementById('ubicacionLocalizacion').value = data.ubicacion;
+            document.getElementById('generalDescription').value = data.descripcionGeneral;
+
+            // Cargar atributos de tarea
+            urgenteCheckbox.checked = data.esUrgente?.activa || false;
+            urgenteCheckbox.dispatchEvent(new Event('change'));
+            if (data.esUrgente?.descripcion) document.getElementById('urgenteDescription').value = data.esUrgente.descripcion;
+
+            encargoCheckbox.checked = data.porEncargo?.activa || false;
+            encargoCheckbox.dispatchEvent(new Event('change'));
+            if (data.porEncargo?.descripcion) document.getElementById('encargoDescription').value = data.porEncargo.descripcion;
+
+            // Cargar estado de la tarea (Sin Éxito, etc.)
+            sinExitoCheckbox.checked = data.esSinExito;
+            sinExitoCheckbox.dispatchEvent(new Event('change'));
+
+            if (data.esSinExito) {
+                // Lógica de carga para Sin Éxito (No iniciada)
+            } else {
+                // Lógica para tareas completadas
+                tareaMantenimientoCheckbox.checked = data.tareaMantenimiento.activa;
+                tareaMantenimientoCheckbox.dispatchEvent(new Event('change'));
+                document.getElementById('tareaMantenimientoDesc').value = data.tareaMantenimiento.descripcion;
+                if (data.tareaMantenimiento.informacionAdicional) {
+                    document.getElementById('adicionalTareaMantenimiento').value = data.tareaMantenimiento.informacionAdicional;
+                }
+
+                pointSectionsDiv.innerHTML = `<h2 class="text-lg font-semibold text-blue-800 mb-4">Puntos de Trabajo</h2>`;
+                if (data.puntosTrabajo) data.puntosTrabajo.forEach(point => addPointSection(point));
+                updatePointTitles();
+
+                gastoMaterialCheckbox.checked = Object.keys(data.gastoMaterial || {}).length > 0;
+                gastoMaterialCheckbox.dispatchEvent(new Event('change'));
+                for (const material in data.gastoMaterial) {
+                    const input = document.querySelector(`[data-material-name="${material}"]`);
+                    if (input) input.value = data.gastoMaterial[material];
+                }
+                if (data.informacionAdicionalMaterial) {
+                    document.getElementById('adicionalMaterial').value = data.informacionAdicionalMaterial;
+                }
+
+                cableCheckbox.checked = Object.keys(data.cableDesplegado || {}).length > 0;
+                cableCheckbox.dispatchEvent(new Event('change'));
+                for (const cable in data.cableDesplegado) {
+                    const input = document.querySelector(`[data-cable-type="${cable}"]`);
+                    if (input) input.value = data.cableDesplegado[cable];
+                }
+            }
+            updatePointsDisplay();
+            showAlert("Datos de la tarea cargados con éxito.");
+        }
+
+        function resetForm() {
+            document.querySelector('form')?.reset(); // Intenta resetear si hay un form
+            document.querySelectorAll('input[type="text"], input[type="number"], input[type="date"], textarea, select').forEach(el => el.value = '');
+            document.querySelectorAll('input[type="checkbox"]').forEach(el => el.checked = false);
+
+            setDefaultDate();
+
+            // Ocultar todas las secciones que dependen de checkboxes
+            [encargoSection, urgenteSection, jointTaskSection, tareaMantenimientoSection, sinExitoSection, materialExpenseSection, cableExpenseSection, sinExitoOtroDiv, direccionDiv].forEach(section => section.classList.add('hidden'));
+
+            // Habilitar checkboxes deshabilitados
+            sinExitoCheckbox.disabled = false;
+
+            // Resetear puntos de trabajo
+            pointSectionsDiv.innerHTML = `<h2 class="text-lg font-semibold text-blue-800 mb-4">Puntos de Trabajo</h2>`;
+            addPointSection();
+            togglePointEntry(false);
+
+            // Resetear displays
+            generatedCommentDiv.textContent = '';
+            excelCommentTextarea.value = '';
+            copyCommentBtn.classList.add('hidden');
+            updatePointsDisplay();
+        }
+
+        // --- LÓGICA DE GUARDADO Y GENERACIÓN ---
+        saveTaskBtn.addEventListener('click', saveTaskData);
+        generateCommentBtn.addEventListener('click', generateComment);
+
+        function getTaskDataFromForm() {
+            const taskNumber = document.getElementById('taskNumber').value.trim();
+            const { totalOverallPoints } = getAggregatedConceptsAndPoints();
+
+            const taskData = {
+                id: taskNumber,
+                fecha: document.getElementById('taskDate').value,
+                equipo: equipoSelect.value,
+                integrantes: teamNamesInput.value.trim(),
+                ubicacion: document.getElementById('ubicacionLocalizacion').value.trim(),
+                descripcionGeneral: document.getElementById('generalDescription').value.trim(),
+                timestamp: serverTimestamp(),
+                porEncargo: {
+                    activa: encargoCheckbox.checked,
+                    descripcion: document.getElementById('encargoDescription').value.trim()
+                },
+                esUrgente: {
+                    activa: urgenteCheckbox.checked,
+                    descripcion: document.getElementById('urgenteDescription').value.trim()
+                }
+            };
+
+            const selectedTeamData = netDataTeams[taskData.equipo];
+            if (selectedTeamData) {
+                Object.keys(selectedTeamData).forEach(key => {
+                    if (key.startsWith('Integrante')) {
+                        taskData[key] = selectedTeamData[key];
+                    }
+                });
+            }
+
+            taskData.esSinExito = sinExitoCheckbox.checked;
+
+            if (taskData.esSinExito) {
+                let motivo = sinExitoMotivoSelect.value;
+                if (motivo === 'Otros') {
+                    motivo += `: ${document.getElementById('sinExitoOtroInput').value.trim()}`;
+                }
+                taskData.sinExito = {
+                    motivo: motivo,
+                    visitas: parseInt(document.getElementById('visitasSinExito').value) || 1,
+                    direccion: sinExitoMotivoSelect.value === 'Falta de permiso de fachada' ? document.getElementById('direccionFachada').value.trim() : null,
+                    informacionAdicional: document.getElementById('adicionalSinExito').value.trim()
+                };
+                taskData.puntosTotalesEstimados = 0;
+            } else {
+                taskData.puntosTotalesEstimados = parseFloat(totalOverallPoints.toFixed(2));
+                taskData.tareaMantenimiento = {
+                    activa: tareaMantenimientoCheckbox.checked,
+                    descripcion: document.getElementById('tareaMantenimientoDesc').value.trim(),
+                    informacionAdicional: document.getElementById('adicionalTareaMantenimiento').value.trim()
+                };
+                taskData.puntosTrabajo = [];
+                document.querySelectorAll('.point-item').forEach((item, index) => {
+                    const point = { id: index + 1, ubicacion: item.querySelector('.point-location').value, conceptos: [] };
+                    item.querySelectorAll('.point-details-container .flex').forEach(row => {
+                        const conceptSelect = row.querySelector('.concept-select');
+                        let name = conceptSelect.value === 'Otro' ? row.querySelector('.other-concept-input').value.trim() : conceptSelect.value;
+                        const quantity = parseInt(row.querySelector('.quantity-input').value) || 0;
+                        if (name && quantity > 0) {
+                            point.conceptos.push({ nombre: name, cantidad: quantity, puntos: (conceptPoints[name] || 0) * quantity });
+                        }
+                    });
+                    taskData.puntosTrabajo.push(point);
+                });
+
+                taskData.gastoMaterial = {};
+                if (gastoMaterialCheckbox.checked) {
+                    document.querySelectorAll('.material-input').forEach(input => {
+                        const name = input.dataset.materialName;
+                        const quantity = parseInt(input.value) || 0;
+                        if (quantity > 0) taskData.gastoMaterial[name] = quantity;
+                    });
+                    taskData.informacionAdicionalMaterial = document.getElementById('adicionalMaterial').value.trim();
+                }
+
+                taskData.cableDesplegado = {};
+                if (cableCheckbox.checked) {
+                    document.querySelectorAll('.cable-input').forEach(input => {
+                        const type = input.dataset.cableType;
+                        const meters = parseFloat(input.value) || 0;
+                        if (meters > 0) taskData.cableDesplegado[type] = meters;
+                    });
+                }
+            }
+
+            taskData.isJointTask = jointTaskCheckbox.checked;
+            if (taskData.isJointTask) {
+                taskData.jointTaskDetails = {
+                    secondaryTeam: secondaryTeamSelect.value,
+                    proportion: document.getElementById('proportionSelect').value
+                };
+            }
+            return taskData;
+        }
+
+        async function saveTaskData() {
+            const taskNumber = document.getElementById('taskNumber').value.trim();
+            if (!taskNumber) {
+                showAlert('¡Error! El "Número de Tarea" es obligatorio para guardar.');
+                return;
+            }
+            if (jointTaskCheckbox.checked && (!secondaryTeamSelect.value || !proportionSelect.value)) {
+                showAlert('¡Error! Si es una Tarea en Conjunto, debe seleccionar el segundo equipo y la proporción.');
+                return;
+            }
+
+            saveTaskBtn.disabled = true;
+            saveTaskBtn.textContent = 'Guardando...';
+
+            const taskData = getTaskDataFromForm();
+
+            try {
+                if (taskData.isJointTask && !taskData.esSinExito) {
+                    const totalPoints = parseFloat(getAggregatedConceptsAndPoints().totalOverallPoints.toFixed(2));
+                    const [primaryPercent, secondaryPercent] = taskData.jointTaskDetails.proportion.split('-').map(Number);
+
+                    const primaryPoints = totalPoints * (primaryPercent / 100);
+                    const secondaryPoints = totalPoints * (secondaryPercent / 100);
+
+                    // 1. Guardar Tarea Principal
+                    const primaryTask = { ...taskData };
+                    primaryTask.puntosTotalesEstimados = parseFloat(primaryPoints.toFixed(2));
+                    delete primaryTask.isJointTask;
+                    delete primaryTask.jointTaskDetails;
+                    await setDoc(doc(db, `datosv3/${primaryTask.id}`), primaryTask);
+
+                    // 2. Crear y Guardar Tarea Secundaria
+                    const secondaryTeamId = taskData.jointTaskDetails.secondaryTeam;
+                    const secondaryTeamData = netDataTeams[secondaryTeamId];
+                    const secondaryTaskId = `${taskData.id}A`;
+
+                    const secondaryTask = {
+                        id: secondaryTaskId,
+                        fecha: taskData.fecha,
+                        equipo: secondaryTeamId,
+                        integrantes: secondaryTeamData.integrantes,
+                        ubicacion: taskData.ubicacion,
+                        descripcionGeneral: `Puntos Compartidos de la tarea ${taskData.id}`,
+                        puntosTotalesEstimados: parseFloat(secondaryPoints.toFixed(2)),
+                        esSinExito: false, esUrgente: taskData.esUrgente, porEncargo: taskData.porEncargo,
+                        timestamp: serverTimestamp()
+                    };
+                    Object.keys(secondaryTeamData).forEach(key => {
+                        if (key.startsWith('Integrante')) {
+                            secondaryTask[key] = secondaryTeamData[key];
+                        }
+                    });
+
+                    await setDoc(doc(db, `datosv3/${secondaryTaskId}`), secondaryTask);
+                    saveTaskBtn.textContent = '¡Tareas Guardadas con Éxito!';
+
+                } else {
+                    delete taskData.isJointTask;
+                    delete taskData.jointTaskDetails;
+                    await setDoc(doc(db, `datosv3/${taskData.id}`), taskData);
+                    saveTaskBtn.textContent = '¡Guardado con Éxito!';
+                }
+
+                saveTaskBtn.classList.replace('bg-blue-600', 'bg-green-500');
+            } catch (error) {
+                console.error("Error al guardar en Firestore: ", error);
+                showAlert("Hubo un error al guardar los datos. Revisa la consola para más detalles.");
+                saveTaskBtn.textContent = 'Error al Guardar';
+                saveTaskBtn.classList.replace('bg-blue-600', 'bg-red-500');
+            } finally {
+                setTimeout(() => {
+                    saveTaskBtn.disabled = false;
+                    saveTaskBtn.textContent = 'Guardar Tarea en Base de Datos';
+                    saveTaskBtn.classList.remove('bg-green-500', 'bg-red-500');
+                    saveTaskBtn.classList.add('bg-blue-600');
+                }, 3000);
+            }
+        }
+
+        function generateComment() {
+            const taskNumber = document.getElementById('taskNumber').value.trim();
+            const taskDate = document.getElementById('taskDate').value;
+            if (!taskNumber || !taskDate || !equipoSelect.value) {
+                showAlert('Rellena Número de Tarea, Fecha y Equipo para generar el comentario.');
+                return;
+            }
+
+            const formattedDate = taskDate.split('-').reverse().join('/');
+            let comment = `${taskNumber}-${formattedDate}#${teamNamesInput.value.trim()} ${equipoSelect.value}.\n`;
+
+            if (urgenteCheckbox.checked) comment += "--- TAREA URGENTE ---\n";
+            if (encargoCheckbox.checked) comment += "--- TAREA POR ENCARGO ---\n";
+
+            const generalDesc = document.getElementById('generalDescription').value.trim();
+            if (generalDesc) comment += `${generalDesc}\n`;
+            comment += `${document.getElementById('ubicacionLocalizacion').value.trim()}\n---\n`;
+
+            if (sinExitoCheckbox.checked) {
+                let motivo = sinExitoMotivoSelect.value;
+                if (motivo === 'Otros') motivo += `: ${document.getElementById('sinExitoOtroInput').value.trim()}`;
+                const visitas = document.getElementById('visitasSinExito').value;
+                const direccion = sinExitoMotivoSelect.value === 'Falta de permiso de fachada' ? ` (${document.getElementById('direccionFachada').value.trim()})` : '';
+                const adicional = document.getElementById('adicionalSinExito').value.trim();
+                comment += `SIN EXITO (No Iniciada)\nVisita N° ${visitas}\nMotivo: ${motivo}${direccion}\n`;
+                if (adicional) comment += `Información Adicional: ${adicional}\n`;
+            } else {
+                if (tareaMantenimientoCheckbox.checked) {
+                    const desc = document.getElementById('tareaMantenimientoDesc').value.trim() || 'Se realiza tarea de mantenimiento';
+                    const adicional = document.getElementById('adicionalTareaMantenimiento').value.trim();
+                    comment += `Tarea de Mantenimiento: ${desc}\n`;
+                    if (adicional) comment += `Información Adicional: ${adicional}\n`;
+                    comment += `---\n`;
+                }
+
+                document.querySelectorAll('.point-item').forEach((item, index) => {
+                    const location = item.querySelector('.point-location').value;
+                    let pointContent = `Punto ${index + 1}${location ? ` en ${location}` : ''}\n`;
+                    let detailsAdded = false;
+                    item.querySelectorAll('.point-details-container .flex').forEach(row => {
+                        const conceptSelect = row.querySelector('.concept-select');
+                        let name = conceptSelect.value === 'Otro' ? row.querySelector('.other-concept-input').value.trim() : conceptSelect.value;
+                        const quantity = parseInt(row.querySelector('.quantity-input').value) || 0;
+                        if (name && quantity > 0) {
+                            pointContent += `${quantity} ${name}\n`;
+                            detailsAdded = true;
+                        }
+                    });
+                    if (detailsAdded) comment += `${pointContent}---\n`;
+                });
+
+                if (gastoMaterialCheckbox.checked) {
+                    const materials = {};
+                    document.querySelectorAll('.material-input').forEach(input => {
+                        const name = input.dataset.materialName;
+                        const quantity = parseInt(input.value) || 0;
+                        if (quantity > 0) materials[name] = quantity;
+                    });
+                    const materialKeys = Object.keys(materials);
+                    const adicional = document.getElementById('adicionalMaterial').value.trim();
+                    if (materialKeys.length > 0 || adicional) {
+                        comment += `Gasto Material:\n`;
+                        materialKeys.forEach(name => comment += `${materials[name]} ${name}\n`);
+                        if (adicional) comment += `Información Adicional: ${adicional}\n`;
+                        comment += `---\n`;
+                    }
+                }
+
+                if (cableCheckbox.checked) {
+                    const cables = {};
+                    let totalMeters = 0;
+                    document.querySelectorAll('.cable-input').forEach(input => {
+                        const type = input.dataset.cableType;
+                        const meters = parseFloat(input.value) || 0;
+                        if (meters > 0) {
+                            cables[type] = meters;
+                            totalMeters += meters;
+                        }
+                    });
+                    const cableKeys = Object.keys(cables);
+                    const adicional = document.getElementById('adicionalCable').value.trim();
+                    if (cableKeys.length > 0 || adicional) {
+                        comment += `Despliegue de Cable:\n`;
+                        cableKeys.forEach(type => {
+                            const cableInfo = cableTypes.find(c => c.id === type);
+                            if (cableInfo) comment += `${cables[type]} metros de ${cableInfo.nombre.toLowerCase()}\n`;
+                        });
+                        if (adicional) comment += `Información Adicional: ${adicional}\n`;
+                        comment += `Total de cable desplegado: ${totalMeters.toFixed(2)} metros\n`;
+                        comment += `---\n`;
+                    }
+                }
+            }
+
+            generatedCommentDiv.textContent = comment;
+            excelCommentTextarea.value = formatConceptsSummaryText();
+            copyCommentBtn.classList.remove('hidden');
+        }
+
+        function getAggregatedConceptsAndPoints() {
+            const aggregated = {};
+            let totalCableMeters = 0;
+            const add = (concept, qty) => {
+                if (!aggregated[concept]) aggregated[concept] = { quantity: 0, points: 0 };
+                aggregated[concept].quantity += qty;
+                const unitPoints = conceptPoints[concept] || 0;
+                aggregated[concept].points += unitPoints * qty;
+            };
+
+            if (!sinExitoCheckbox.checked) {
+                if (tareaMantenimientoCheckbox.checked) add('Tarea de Mantenimiento', 1);
+
+                document.querySelectorAll('.point-item .point-details-container .flex').forEach(row => {
+                    const conceptSelect = row.querySelector('.concept-select');
+                    let name = conceptSelect.value === 'Otro' ? row.querySelector('.other-concept-input').value.trim() : conceptSelect.value;
+                    const quantity = parseInt(row.querySelector('.quantity-input').value) || 0;
+                    if (name && quantity > 0) add(name, quantity);
+                });
+
+                if (cableCheckbox.checked) {
+                    document.querySelectorAll('.cable-input').forEach(input => {
+                        const meters = parseFloat(input.value) || 0;
+                        if (meters > 0) {
+                            const cableInfo = cableTypes.find(c => c.id === input.dataset.cableType);
+                            if (cableInfo) {
+                                const conceptName = `${cableInfo.nombre} (${cableInfo.points} pts/m)`;
+                                add(conceptName, meters);
+                                totalCableMeters += meters;
+                            }
+                        }
+                    });
+                }
+            }
+
+            const breakdown = Object.keys(aggregated).sort().map(concept => ({
+                concept,
+                quantity: aggregated[concept].quantity,
+                pointsPerUnit: conceptPoints[concept] || 0,
+                totalPoints: aggregated[concept].points
+            }));
+
+            const totalOverallPoints = breakdown.reduce((sum, item) => sum + item.totalPoints, 0);
+            return { conceptsBreakdown: breakdown, totalOverallPoints, totalCableMeters };
+        }
+
+        function formatConceptsSummaryText() {
+            const { conceptsBreakdown, totalCableMeters } = getAggregatedConceptsAndPoints();
+            let totalOverallPoints = parseFloat(totalPointsDisplay.textContent); // Usar el valor visible
+            const generalDesc = document.getElementById('generalDescription').value.trim();
+            let summary = "";
+
+            if (urgenteCheckbox.checked) summary += "--- TAREA URGENTE ---\n";
+            if (encargoCheckbox.checked) summary += "--- TAREA POR ENCARGO ---\n";
+
+            if (sinExitoCheckbox.checked) {
+                let motivo = sinExitoMotivoSelect.value;
+                if (motivo === 'Otros') motivo += `: ${document.getElementById('sinExitoOtroInput').value.trim()}`;
+                const visitas = document.getElementById('visitasSinExito').value;
+                const direccion = sinExitoMotivoSelect.value === 'Falta de permiso de fachada' ? `\nDirección: ${document.getElementById('direccionFachada').value.trim()}` : '';
+                const adicional = document.getElementById('adicionalSinExito').value.trim();
+                summary += `TAREA SIN ÉXITO (No Iniciada)\nVisita N° ${visitas}\nMotivo: ${motivo}${direccion}`;
+                if (adicional) summary += `\nInformación Adicional: ${adicional}`;
+            } else {
+                if (conceptsBreakdown.length === 0) {
+                    summary += 'No se registraron conceptos.';
+                } else {
+                    summary += conceptsBreakdown.map(item =>
+                        `${item.quantity} - ${item.concept} (${item.totalPoints.toFixed(2)} pts)`
+                    ).join('\n');
+                }
+
+                if (totalCableMeters > 0) {
+                    summary += `\nTotal de cable desplegado: ${totalCableMeters.toFixed(2)} metros`;
+                }
+
+                summary += `\n\nTotal estimado: ${totalOverallPoints.toFixed(2)} puntos`;
+
+                if (jointTaskCheckbox.checked) {
+                    const proportionText = proportionSelect.options[proportionSelect.selectedIndex].text;
+                    summary += `\n(Tarea en conjunto - Porción del equipo: ${proportionText})`;
+                }
+            }
+
+            if (generalDesc) summary += `\n\nObservaciones Finales: ${generalDesc}`;
+            return summary;
+        }
+
+        // --- Copiar y Enviar ---
+        document.getElementById('copyCommentBtn').addEventListener('click', () => copyToClipboard(generatedCommentDiv.textContent, 'Comentario'));
+        document.getElementById('sendWhatsappCommentBtn').addEventListener('click', () => sendToWhatsapp(generatedCommentDiv.textContent));
+        document.getElementById('sendWhatsappExcelBtn').addEventListener('click', () => sendToWhatsapp(excelCommentTextarea.value));
+        document.getElementById('copyToKeepBtn').addEventListener('click', copyToKeep);
+
+        function copyToClipboard(text, type) {
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(text).then(() => {
+                    showAlert(`¡${type} copiado al portapapeles!`);
+                }).catch(err => {
+                    console.error('Error al copiar:', err);
+                    showAlert('Error al copiar.');
+                });
+            }
+        }
+
+        function sendToWhatsapp(text) {
+            if (!text) {
+                showAlert("Primero, genera el contenido para poder enviarlo.");
+                return;
+            }
+            window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+        }
+
+        function copyToKeep() {
+            // Lógica de copyToKeep (simplificada para brevedad, puede ser expandida)
+            const textToCopy = formatConceptsSummaryText();
+            copyToClipboard(textToCopy, "Contenido para Google Keep");
+        }
+
+    </script>
+</body>
+
+</html>

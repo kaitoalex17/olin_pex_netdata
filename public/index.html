@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NetData - Sistema de Gestión de Planta Externa</title>
+  <!-- Google Fonts Outfit & Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Estilos del Tema Olin -->
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    /* Estilos específicos para la SPA */
+    .glow-cyan-focus:focus {
+      border-color: var(--color-info) !important;
+      box-shadow: var(--glow-cyan) !important;
+    }
+    .point-item {
+      background: rgba(0, 0, 0, 0.15) !important;
+      border: 1px solid rgba(0, 237, 255, 0.1) !important;
+    }
+    .loading-overlay {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 31, 33, 0.9);
+      display: flex; flex-direction: column; justify-content: center; align-items: center;
+      z-index: 9999;
+      transition: opacity 0.3s ease;
+    }
+    .spinner {
+      border: 4px solid rgba(0, 237, 255, 0.1);
+      border-top: 4px solid var(--color-info);
+      border-radius: 50%;
+      width: 50px; height: 50px;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    #generatedComment {
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      background: rgba(0, 0, 0, 0.3);
+      border-left: 4px solid var(--color-info);
+      padding: 1rem;
+      border-radius: var(--radius-sm);
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 0.9rem;
+      margin-top: 1rem;
+      border: 1px solid var(--border-color);
+      border-left: 4px solid var(--color-info);
+    }
+    #excelComment {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--border-color);
+      color: #fff;
+    }
+    .ai-btn {
+      background: rgba(0, 237, 255, 0.15);
+      border: 1px solid var(--color-info);
+      color: var(--color-info);
+      font-weight: bold;
+      width: 42px; height: 42px;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .ai-btn:hover {
+      background: var(--color-info);
+      color: #000;
+      box-shadow: var(--glow-cyan);
+      transform: scale(1.05);
+    }
+    .flex-row-gap {
+      display: flex; gap: 0.5rem; align-items: center;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Loading Screen -->
+  <div id="loadingOverlay" class="loading-overlay">
+    <div class="spinner"></div>
+    <p style="margin-top: 1.5rem; font-weight: 600; letter-spacing: 0.05em; color: var(--color-info);">Cargando NetData...</p>
+  </div>
+
+  <!-- Navbar -->
+  <header class="navbar">
+    <div class="nav-brand">NET<span>DATA</span></div>
+    <ul class="nav-links">
+      <li><a class="nav-link active" data-tab="formTab">Formulario</a></li>
+      <li><a class="nav-link" data-tab="reportsTab" id="navReportsLink" style="display:none;">Informes</a></li>
+      <li><a class="nav-link" data-tab="settingsTab" id="navSettingsLink" style="display:none;">Ajustes</a></li>
+      <li><a class="nav-link logout" id="logoutLink">Salir</a></li>
+    </ul>
+  </header>
+
+  <div class="container">
+
+    <!-- ==========================================
+         PESTAÑA 1: FORMULARIO GENERADOR DE TAREAS
+         ========================================== -->
+    <main id="formTab" class="spa-tab active animated-fade-in">
+      <div class="glass-panel" style="margin-bottom: 2rem;">
+        <h1 style="font-family: var(--font-display); font-size: 1.8rem; margin-bottom: 2rem; color: var(--color-info); text-align: center;">Generador de Tareas</h1>
+        
+        <div class="grid-2">
+          <!-- ID & Parser -->
+          <div class="form-group">
+            <label for="taskNumber" class="form-label">Número de Tarea (ID Único)</label>
+            <div class="flex-row-gap">
+              <input type="text" id="taskNumber" class="form-control" placeholder="Ej: 108435" style="flex-grow: 1;">
+              <button type="button" id="openParserBtn" class="ai-btn" title="Extraer datos con IA (Groq)">+</button>
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label for="taskDate" class="form-label">Fecha</label>
+            <input type="date" id="taskDate" class="form-control">
+          </div>
+          
+          <div class="form-group">
+            <label for="equipoSelect" class="form-label">Equipo Principal</label>
+            <select id="equipoSelect" class="form-control">
+              <option value="">Cargando equipos...</option>
+            </select>
+          </div>
+          
+          <div class="form-group">
+            <label for="teamNames" class="form-label">Integrantes del Equipo</label>
+            <input type="text" id="teamNames" class="form-control" placeholder="Se autocompletará" readonly>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-top: 1rem;">
+          <label for="ubicacionLocalizacion" class="form-label">Ubicación o Localización</label>
+          <input type="text" id="ubicacionLocalizacion" class="form-control" placeholder="Ej: Torremolinos, Benalmádena">
+        </div>
+
+        <div class="form-group">
+          <label for="generalDescription" class="form-label">Observaciones Finales (Opcional)</label>
+          <textarea id="generalDescription" rows="2" class="form-control" placeholder="Ej: Se realiza reparación de acometida exterior..."></textarea>
+        </div>
+
+        <!-- Checkboxes Especiales -->
+        <div class="grid-2" style="margin: 1.5rem 0;">
+          <div class="glass-panel point-item" style="padding: 1rem;">
+            <label class="flex-row-gap" style="cursor: pointer;">
+              <input type="checkbox" id="encargoCheckbox" style="transform: scale(1.2);">
+              <span class="form-label" style="margin: 0;">Tarea por encargo</span>
+            </label>
+            <div id="encargoSection" style="display:none; margin-top: 0.75rem;">
+              <textarea id="encargoDescription" rows="2" class="form-control" placeholder="Descripción del encargo..."></textarea>
+            </div>
+          </div>
+
+          <div class="glass-panel point-item" style="padding: 1rem;">
+            <label class="flex-row-gap" style="cursor: pointer;">
+              <input type="checkbox" id="urgenteCheckbox" style="transform: scale(1.2);">
+              <span class="form-label" style="margin: 0; color: var(--color-danger);">Tarea URGENTE</span>
+            </label>
+            <div id="urgenteSection" style="display:none; margin-top: 0.75rem;">
+              <textarea id="urgenteDescription" rows="2" class="form-control" placeholder="Motivo de la urgencia..."></textarea>
+            </div>
+          </div>
+        </div>
+
+        <div class="glass-panel point-item" style="padding: 1rem; margin-bottom: 1.5rem;">
+          <label class="flex-row-gap" style="cursor: pointer;">
+            <input type="checkbox" id="jointTaskCheckbox" style="transform: scale(1.2);">
+            <span class="form-label" style="margin: 0; color: var(--color-info);">Tarea en conjunto (Compartida)</span>
+          </label>
+          <div id="jointTaskSection" style="display:none; margin-top: 1rem;" class="grid-2">
+            <div class="form-group">
+              <label for="secondaryTeamSelect" class="form-label">Segundo Equipo Participante</label>
+              <select id="secondaryTeamSelect" class="form-control">
+                <option value="">Selecciona equipo secundario</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="proportionSelect" class="form-label">Proporción de Puntos (Principal - Secundario)</label>
+              <select id="proportionSelect" class="form-control">
+                <option value="50-50">50% - 50%</option>
+                <option value="75-25">75% - 25%</option>
+                <option value="25-75">25% - 75%</option>
+                <option value="33-67">33% - 67%</option>
+                <option value="67-33">67% - 33%</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="glass-panel point-item" style="padding: 1rem; margin-bottom: 1.5rem;">
+          <label class="flex-row-gap" style="cursor: pointer;">
+            <input type="checkbox" id="tareaMantenimientoCheckbox" style="transform: scale(1.2);">
+            <span class="form-label" style="margin: 0; color: var(--color-warning);">Tarea de Mantenimiento</span>
+          </label>
+          <div id="tareaMantenimientoSection" style="display:none; margin-top: 1rem;">
+            <div class="form-group">
+              <label for="tareaMantenimientoDesc" class="form-label">Descripción del Mantenimiento</label>
+              <textarea id="tareaMantenimientoDesc" rows="2" class="form-control" placeholder="Ej: Remplazo de TO96 a CTO blanca..."></textarea>
+            </div>
+            <div class="form-group">
+              <label for="adicionalTareaMantenimiento" class="form-label">Información Adicional</label>
+              <textarea id="adicionalTareaMantenimiento" rows="2" class="form-control" placeholder="Ej: Se requiere revisión futura..."></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sin Exito -->
+        <div class="glass-panel point-item" style="padding: 1rem; margin-bottom: 2rem; border-color: rgba(239, 68, 68, 0.2) !important;">
+          <label class="flex-row-gap" style="cursor: pointer;">
+            <input type="checkbox" id="sinExitoCheckbox" style="transform: scale(1.2);">
+            <span class="form-label" style="margin: 0; color: var(--color-danger);">SIN ÉXITO (No Iniciada / Cancelada)</span>
+          </label>
+          <div id="sinExitoSection" style="display:none; margin-top: 1rem;">
+            <div class="form-group">
+              <label for="sinExitoMotivo" class="form-label">Motivo del fallo</label>
+              <select id="sinExitoMotivo" class="form-control">
+                <option value="">Selecciona un motivo</option>
+                <option value="Falta de permiso">Falta de permiso</option>
+                <option value="Falta de permiso de fachada">Falta de permiso de fachada</option>
+                <option value="Falta de permiso de ayuntamiento">Falta de permiso de ayuntamiento</option>
+                <option value="Canalizado obstruido">Canalizado obstruido</option>
+                <option value="No hay acceso a la propiedad o al riti / falta llaves">No hay acceso a la propiedad o al riti / falta llaves</option>
+                <option value="Cliente cancela">Cliente cancela</option>
+                <option value="Vehículo sobre la arqueta o cámara">Vehículo sobre la arqueta o cámara</option>
+                <option value="Dirección errónea">Dirección errónea</option>
+                <option value="Trabajo mal planteado en oficina">Trabajo mal planteado en oficina</option>
+                <option value="Otros">Otros</option>
+              </select>
+            </div>
+            <div id="sinExitoOtroDiv" class="form-group" style="display:none;">
+              <label for="sinExitoOtroInput" class="form-label">Especificar motivo</label>
+              <input type="text" id="sinExitoOtroInput" class="form-control" placeholder="Escribe el motivo">
+            </div>
+            <div id="direccionDiv" class="form-group" style="display:none;">
+              <label for="direccionFachada" class="form-label">Dirección de la fachada</label>
+              <input type="text" id="direccionFachada" class="form-control" placeholder="Calle, número, municipio">
+            </div>
+            <div class="form-group">
+              <label for="adicionalSinExito" class="form-label">Información Adicional</label>
+              <textarea id="adicionalSinExito" rows="2" class="form-control" placeholder="Observaciones extras..."></textarea>
+            </div>
+            <div class="form-group">
+              <label for="visitasSinExito" class="form-label">Número de visitas realizadas</label>
+              <input type="number" id="visitasSinExito" class="form-control" min="1" value="1">
+            </div>
+          </div>
+        </div>
+
+        <!-- PUNTOS DE TRABAJO -->
+        <div id="pointSections" style="margin-bottom: 1.5rem;">
+          <h2 style="font-family: var(--font-display); font-size: 1.2rem; margin-bottom: 1rem; color: var(--color-info);">Puntos de Trabajo</h2>
+          <!-- Aquí se inyectan dinámicamente los puntos de trabajo -->
+        </div>
+
+        <button type="button" id="addPointBtn" class="btn btn-secondary" style="width: 100%; margin-bottom: 2rem;">
+          Agregar Punto de Trabajo
+        </button>
+
+        <!-- DESPLIEGUE DE CABLE -->
+        <div class="glass-panel point-item" style="padding: 1.25rem; margin-bottom: 1.5rem;">
+          <label class="flex-row-gap" style="cursor: pointer; margin-bottom: 1rem;">
+            <input type="checkbox" id="cableCheckbox" style="transform: scale(1.2);">
+            <span class="form-label" style="margin: 0; color: var(--color-info);">Despliegue de Cable</span>
+          </label>
+          <div id="cableExpenseSection" style="display:none;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">
+              <span class="form-label">Metros totales</span>
+              <span id="totalCableMeters" style="font-weight: 700; color: var(--color-accent); font-size: 1.1rem;">0.00 m</span>
+            </div>
+            <div id="cableInputsContainer" class="grid-2">
+              <!-- Cargado dinámicamente -->
+            </div>
+            <div class="form-group" style="margin-top: 1rem;">
+              <label for="adicionalCable" class="form-label">Observaciones de Despliegue</label>
+              <textarea id="adicionalCable" rows="2" class="form-control" placeholder="Información del tendido de cable..."></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- GASTO MATERIAL -->
+        <div class="glass-panel point-item" style="padding: 1.25rem; margin-bottom: 2rem;">
+          <label class="flex-row-gap" style="cursor: pointer; margin-bottom: 1rem;">
+            <input type="checkbox" id="gastoMaterialCheckbox" style="transform: scale(1.2);">
+            <span class="form-label" style="margin: 0; color: var(--color-info);">Declarar Gasto Material</span>
+          </label>
+          <div id="materialExpenseSection" style="display:none;">
+            <div id="materialInputsContainer" class="grid-2">
+              <!-- Cargado dinámicamente -->
+            </div>
+            <div class="form-group" style="margin-top: 1rem;">
+              <label for="adicionalMaterial" class="form-label">Notas sobre Materiales</label>
+              <textarea id="adicionalMaterial" rows="2" class="form-control" placeholder="Materiales dañados o incidencias..."></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- TOTAL GENERAL -->
+        <div style="background: rgba(0, 0, 0, 0.4); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 1.5rem; text-align: center; margin-bottom: 2.5rem;">
+          <div class="form-label" style="margin-bottom: 0.25rem;">Puntos Totales de la Tarea</div>
+          <div id="totalPointsDisplay" style="font-size: 3rem; font-weight: 800; color: var(--color-accent); text-shadow: var(--glow-accent);">0.00</div>
+        </div>
+
+        <!-- BOTONES DE ACCIÓN -->
+        <div style="display: flex; flex-direction: column; gap: 1rem;">
+          <button type="button" id="saveTaskBtn" class="btn btn-primary" style="font-size: 1rem; padding: 1rem;">
+            Guardar Tarea en Base de Datos
+          </button>
+          <button type="button" id="generateCommentBtn" class="btn btn-secondary" style="padding: 0.9rem;">
+            Generar / Actualizar Comentario
+          </button>
+        </div>
+
+        <!-- COMENTARIO GENERADO (WHATSAPP) -->
+        <div style="margin-top: 3rem;">
+          <h2 style="font-family: var(--font-display); font-size: 1.25rem; color: var(--color-info); margin-bottom: 0.5rem;">Comentario para Tarea:</h2>
+          <div id="generatedComment">El comentario aparecerá aquí una vez lo generes.</div>
+          <button type="button" id="copyCommentBtn" class="btn btn-secondary" style="width: 100%; margin-top: 1rem; display:none;">
+            Copiar Comentario
+          </button>
+        </div>
+
+        <!-- RESUMEN EXCEL -->
+        <div style="margin-top: 2rem;">
+          <h2 style="font-family: var(--font-display); font-size: 1.25rem; color: var(--color-info); margin-bottom: 0.5rem;">Resumen de Puntos para Excel:</h2>
+          <textarea id="excelComment" rows="8" class="form-control" readonly placeholder="El resumen para Excel se mostrará aquí..."></textarea>
+          
+          <div style="display: grid; grid-template-columns: 1fr; gap: 0.75rem; margin-top: 1rem;" id="sharingContainer">
+            <button type="button" id="sendWhatsappCommentBtn" class="btn btn-secondary" style="background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.2); color: var(--color-success);">
+              Enviar por WhatsApp Comentario
+            </button>
+            <button type="button" id="sendWhatsappExcelBtn" class="btn btn-secondary" style="background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.2); color: var(--color-success);">
+              Enviar por WhatsApp Excel
+            </button>
+            <button type="button" id="copyToKeepBtn" class="btn btn-secondary">
+              Copiar para Google Keep
+            </button>
+          </div>
+        </div>
+
+        <!-- DATOS DE EXTRACCIÓN INTERNA (SOLO CONSULTA) -->
+        <div id="parsedDataViewContainer" style="display:none; margin-top: 3rem; border-top: 1px solid var(--border-color); pt: 2rem;">
+          <h2 style="font-family: var(--font-display); font-size: 1.25rem; color: var(--color-accent); margin-bottom: 1rem;">Detalles Extraídos por IA (Uso Interno):</h2>
+          <div class="glass-panel point-item" id="parsedDataDetails" style="font-size: 0.9rem; line-height: 1.6;">
+            <!-- Rellenado dinámicamente por JS -->
+          </div>
+        </div>
+
+      </div>
+    </main>
+
+    <!-- ==========================================
+         PESTAÑA 2: INFORMES Y PRODUCTIVIDAD
+         ========================================== -->
+    <section id="reportsTab" class="spa-tab animated-fade-in">
+      <div class="glass-panel">
+        <h1 style="font-family: var(--font-display); font-size: 1.8rem; margin-bottom: 1.5rem; color: var(--color-info); text-align: center;">Informes de Productividad</h1>
+        
+        <div class="grid-2" style="margin-bottom: 1.5rem;">
+          <div class="form-group">
+            <label for="reportStartDate" class="form-label">Fecha de Inicio</label>
+            <input type="date" id="reportStartDate" class="form-control">
+          </div>
+          <div class="form-group">
+            <label for="reportEndDate" class="form-label">Fecha de Fin</label>
+            <input type="date" id="reportEndDate" class="form-control">
+          </div>
+        </div>
+
+        <button type="button" id="loadReportBtn" class="btn btn-primary" style="width: 100%; margin-bottom: 2rem;">
+          Generar Informe
+        </button>
+
+        <h2 style="font-family: var(--font-display); font-size: 1.2rem; margin-bottom: 1rem; color: var(--color-accent);">Resumen de Puntos por Equipo</h2>
+        <div class="table-wrapper">
+          <table class="glass-table">
+            <thead>
+              <tr>
+                <th>Equipo</th>
+                <th>Total Tareas</th>
+                <th>Puntos Totales</th>
+              </tr>
+            </thead>
+            <tbody id="reportSummaryBody">
+              <tr>
+                <td colspan="3" style="text-align: center; color: var(--text-secondary);">Introduce un rango de fechas y presiona Generar Informe.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h2 style="font-family: var(--font-display); font-size: 1.2rem; margin-bottom: 1rem; color: var(--color-info); margin-top: 2rem;">Listado de Tareas Realizadas</h2>
+        <div class="table-wrapper">
+          <table class="glass-table">
+            <thead>
+              <tr>
+                <th>ID Tarea</th>
+                <th>Fecha</th>
+                <th>Equipo</th>
+                <th>Integrantes</th>
+                <th>Ubicación</th>
+                <th>Puntos</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody id="reportTasksBody">
+              <tr>
+                <td colspan="7" style="text-align: center; color: var(--text-secondary);">Sin datos cargados.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         PESTAÑA 3: PANEL DE AJUSTES (ADMINISTRADOR)
+         ========================================== -->
+    <section id="settingsTab" class="spa-tab animated-fade-in">
+      <div class="glass-panel">
+        <h1 style="font-family: var(--font-display); font-size: 1.8rem; margin-bottom: 2rem; color: var(--color-info); text-align: center;">Panel de Ajustes</h1>
+        
+        <!-- Navbar interno de Ajustes -->
+        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 2rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem;">
+          <button type="button" class="btn btn-secondary active-settings-btn" data-panel="usersPanel" style="padding: 0.5rem 1rem;">Usuarios</button>
+          <button type="button" class="btn btn-secondary" data-panel="teamsPanel" style="padding: 0.5rem 1rem;">Equipos</button>
+          <button type="button" class="btn btn-secondary" data-panel="conceptsPanel" style="padding: 0.5rem 1rem;">Conceptos</button>
+          <button type="button" class="btn btn-secondary" data-panel="cablesPanel" style="padding: 0.5rem 1rem;">Cables</button>
+          <button type="button" class="btn btn-secondary" data-panel="materialsPanel" style="padding: 0.5rem 1rem;">Materiales</button>
+        </div>
+
+        <!-- 3.1 Panel Usuarios -->
+        <div id="usersPanel" class="settings-subpanel">
+          <h2 style="font-size: 1.25rem; margin-bottom: 1rem; color: var(--color-accent);">Gestión de Cuentas de Usuario</h2>
+          <div class="glass-panel point-item" style="margin-bottom: 1.5rem;">
+            <h3 style="font-size: 1rem; margin-bottom: 1rem;" id="userFormTitle">Crear Nuevo Usuario</h3>
+            <form id="userForm">
+              <input type="hidden" id="userIdInput">
+              <div class="grid-2">
+                <div class="form-group">
+                  <label for="userEmail" class="form-label">Correo Electrónico</label>
+                  <input type="email" id="userEmail" class="form-control" placeholder="nombre@instala.xyz" required autocomplete="username">
+                </div>
+                <div class="form-group">
+                  <label for="userPassword" class="form-label" id="userPasswordLabel">Contraseña</label>
+                  <input type="password" id="userPassword" class="form-control" placeholder="••••••••" autocomplete="new-password">
+                </div>
+                <div class="form-group">
+                  <label for="userRoleSelect" class="form-label">Rol del Usuario</label>
+                  <select id="userRoleSelect" class="form-control" required>
+                    <option value="tecnico">Técnico (Usuario Normal)</option>
+                    <option value="gestor">Gestor</option>
+                    <option value="coordinador">Coordinador</option>
+                    <option value="admin">Administrador</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="userTeamSelect" class="form-label">Equipo Asignado</label>
+                  <select id="userTeamSelect" class="form-control">
+                    <option value="">Ninguno (Gestores/Coordinadores)</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="userMemberSelect" class="form-label">Vincular a Integrante</label>
+                <select id="userMemberSelect" class="form-control">
+                  <option value="">Ninguno (Elegir un equipo primero)</option>
+                </select>
+                <p style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.25rem;">
+                  Vincula esta cuenta con el nombre de un técnico del equipo para no tener que elegirlo en el formulario.
+                </p>
+              </div>
+              <div style="display:flex; gap: 0.5rem; justify-content: flex-end;">
+                <button type="button" id="cancelUserEditBtn" class="btn btn-secondary" style="display:none;">Cancelar</button>
+                <button type="submit" class="btn btn-primary">Guardar Usuario</button>
+              </div>
+            </form>
+          </div>
+
+          <div class="table-wrapper">
+            <table class="glass-table">
+              <thead>
+                <tr>
+                  <th>Correo</th>
+                  <th>Rol</th>
+                  <th>Equipo</th>
+                  <th>Integrante Vinculado</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="usersTableBody">
+                <!-- Rellenado dinámicamente -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 3.2 Panel Equipos -->
+        <div id="teamsPanel" class="settings-subpanel" style="display:none;">
+          <h2 style="font-size: 1.25rem; margin-bottom: 1rem; color: var(--color-accent);">Gestión de Equipos</h2>
+          <div class="glass-panel point-item" style="margin-bottom: 1.5rem;">
+            <form id="teamForm">
+              <div class="grid-2">
+                <div class="form-group">
+                  <label for="teamIdInput" class="form-label">Nombre del Equipo</label>
+                  <input type="text" id="teamIdInput" class="form-control" placeholder="Ej: Málaga_1" required>
+                </div>
+                <div class="form-group">
+                  <label for="teamMembersInput" class="form-label">Integrantes del Equipo (Separados por Coma)</label>
+                  <input type="text" id="teamMembersInput" class="form-control" placeholder="Ej: Juan Pérez, Luis Gómez" required>
+                </div>
+              </div>
+              <div style="display:flex; justify-content: flex-end;">
+                <button type="submit" class="btn btn-primary">Guardar Equipo</button>
+              </div>
+            </form>
+          </div>
+          <div class="table-wrapper">
+            <table class="glass-table">
+              <thead>
+                <tr>
+                  <th>Equipo ID</th>
+                  <th>Integrantes</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="teamsTableBody">
+                <!-- Rellenado dinámicamente -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 3.3 Panel Conceptos -->
+        <div id="conceptsPanel" class="settings-subpanel" style="display:none;">
+          <h2 style="font-size: 1.25rem; margin-bottom: 1rem; color: var(--color-accent);">Conceptos de Trabajo (Baremos)</h2>
+          <div class="glass-panel point-item" style="margin-bottom: 1.5rem;">
+            <form id="conceptForm">
+              <div class="grid-2">
+                <div class="form-group">
+                  <label for="conceptIdInput" class="form-label">Nombre del Concepto</label>
+                  <input type="text" id="conceptIdInput" class="form-control" placeholder="Ej: Fusión de Fibra" required>
+                </div>
+                <div class="form-group">
+                  <label for="conceptPointsInput" class="form-label">Valor en Puntos</label>
+                  <input type="number" id="conceptPointsInput" class="form-control" step="0.01" min="0" placeholder="Ej: 0.66" required>
+                </div>
+                <div class="form-group">
+                  <label for="conceptOrderInput" class="form-label">Orden de Visualización</label>
+                  <input type="number" id="conceptOrderInput" class="form-control" min="1" placeholder="Ej: 1">
+                </div>
+              </div>
+              <div style="display:flex; justify-content: flex-end;">
+                <button type="submit" class="btn btn-primary">Guardar Concepto</button>
+              </div>
+            </form>
+          </div>
+          <div class="table-wrapper">
+            <table class="glass-table">
+              <thead>
+                <tr>
+                  <th>Concepto</th>
+                  <th>Puntos</th>
+                  <th>Orden</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="conceptsTableBody">
+                <!-- Rellenado dinámicamente -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 3.4 Panel Cables -->
+        <div id="cablesPanel" class="settings-subpanel" style="display:none;">
+          <h2 style="font-size: 1.25rem; margin-bottom: 1rem; color: var(--color-accent);">Conceptos de Cable</h2>
+          <div class="glass-panel point-item" style="margin-bottom: 1.5rem;">
+            <form id="cableForm">
+              <div class="grid-2">
+                <div class="form-group">
+                  <label for="cableIdInput" class="form-label">Código del Cable (ID)</label>
+                  <input type="text" id="cableIdInput" class="form-control" placeholder="Ej: interior" required>
+                </div>
+                <div class="form-group">
+                  <label for="cableNameInput" class="form-label">Nombre Comercial</label>
+                  <input type="text" id="cableNameInput" class="form-control" placeholder="Ej: Cable Interior" required>
+                </div>
+                <div class="form-group">
+                  <label for="cablePointsInput" class="form-label">Puntos por Metro</label>
+                  <input type="number" id="cablePointsInput" class="form-control" step="0.0001" min="0" placeholder="Ej: 0.1449" required>
+                </div>
+              </div>
+              <div style="display:flex; justify-content: flex-end;">
+                <button type="submit" class="btn btn-primary">Guardar Cable</button>
+              </div>
+            </form>
+          </div>
+          <div class="table-wrapper">
+            <table class="glass-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Nombre</th>
+                  <th>Puntos / m</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="cablesTableBody">
+                <!-- Rellenado dinámicamente -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 3.5 Panel Materiales -->
+        <div id="materialsPanel" class="settings-subpanel" style="display:none;">
+          <h2 style="font-size: 1.25rem; margin-bottom: 1rem; color: var(--color-accent);">Inventario de Materiales</h2>
+          <div class="glass-panel point-item" style="margin-bottom: 1.5rem;">
+            <form id="materialForm">
+              <div class="grid-2">
+                <div class="form-group">
+                  <label for="materialIdInput" class="form-label">Nombre del Material</label>
+                  <input type="text" id="materialIdInput" class="form-control" placeholder="Ej: Conector SC/APC" required>
+                </div>
+                <div class="form-group">
+                  <label for="materialOrderInput" class="form-label">Orden de Visualización</label>
+                  <input type="number" id="materialOrderInput" class="form-control" min="1" placeholder="Ej: 1">
+                </div>
+              </div>
+              <div style="display:flex; justify-content: flex-end;">
+                <button type="submit" class="btn btn-primary">Guardar Material</button>
+              </div>
+            </form>
+          </div>
+          <div class="table-wrapper">
+            <table class="glass-table">
+              <thead>
+                <tr>
+                  <th>Material</th>
+                  <th>Orden</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="materialsTableBody">
+                <!-- Rellenado dinámicamente -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </div>
+
+  <!-- ==========================================
+       MODALES DE LA APLICACIÓN
+       ========================================== -->
+
+  <!-- 1. Modal para Pegar Texto Crudo (Parser IA - Groq) -->
+  <div id="parserModal" class="modal-overlay">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h3 class="modal-title">Extracción de Datos con IA</h3>
+        <button type="button" class="modal-close" id="closeParserBtn">&times;</button>
+      </div>
+      <div class="form-group">
+        <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1rem;">
+          Pega el texto en crudo de tu parte de trabajo, solicitud de traslado o avería. La IA (Groq - Llama 3.3) lo procesará para rellenar los datos.
+        </p>
+        <textarea id="rawParserText" rows="12" class="form-control" placeholder="[PEGA AQUÍ EL TEXTO DE TU PARTE O ANOTACIÓN]"></textarea>
+      </div>
+      <div style="display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.5rem;">
+        <button type="button" class="btn btn-secondary" id="cancelParserBtn">Cancelar</button>
+        <button type="button" class="btn btn-primary" id="processParserBtn">Procesar y Rellenar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Modal de Confirmación para Carga/Importación de Tarea -->
+  <div id="confirmLoadModal" class="modal-overlay">
+    <div class="modal-container" style="max-width: 400px; text-align: center;">
+      <h3 style="font-family: var(--font-display); font-size: 1.3rem; color: var(--color-info); margin-bottom: 1rem;" id="confirmLoadTitle">¡Tarea Registrada!</h3>
+      <p style="margin-bottom: 1.5rem; font-size: 0.95rem; line-height: 1.5;" id="confirmLoadMessage">
+        ¿Desea cargar los datos de la tarea existente?
+      </p>
+      <div style="display: flex; gap: 0.75rem; justify-content: center;">
+        <button type="button" id="confirmLoadNoBtn" class="btn btn-secondary">No, continuar</button>
+        <button type="button" id="confirmLoadYesBtn" class="btn btn-primary">Sí, cargar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Modal de Alerta / Error General -->
+  <div id="alertModal" class="modal-overlay">
+    <div class="modal-container" style="max-width: 400px; text-align: center;">
+      <h3 style="font-family: var(--font-display); font-size: 1.3rem; margin-bottom: 1rem;" id="alertModalTitle">Mensaje</h3>
+      <p style="margin-bottom: 1.5rem; font-size: 0.95rem; line-height: 1.5;" id="alertModalMessage">
+        Detalle del mensaje.
+      </p>
+      <button type="button" id="alertModalOkBtn" class="btn btn-primary" style="padding: 0.5rem 2rem;">Aceptar</button>
+    </div>
+  </div>
+
+  <!-- Scripts de la Aplicación -->
+  <script src="/js/parser.js"></script>
+  <script src="/js/reports.js"></script>
+  <script src="/js/settings.js"></script>
+  <script src="/js/app.js"></script>
+</body>
+</html>

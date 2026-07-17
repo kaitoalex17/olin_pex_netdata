@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NetData - Iniciar Sesión</title>
+  <!-- Google Fonts Outfit & Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Estilos del Tema Olin -->
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .login-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 1.5rem;
+    }
+    .login-card {
+      width: 100%;
+      max-width: 420px;
+    }
+    .login-logo {
+      font-family: var(--font-display);
+      font-size: 2.2rem;
+      font-weight: 800;
+      text-align: center;
+      margin-bottom: 2rem;
+      letter-spacing: 0.05em;
+    }
+    .login-logo span {
+      color: var(--color-accent);
+    }
+    .login-title {
+      font-family: var(--font-display);
+      font-size: 1.4rem;
+      font-weight: 700;
+      margin-bottom: 1.5rem;
+      text-align: center;
+      color: var(--color-info);
+    }
+    .error-box {
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid var(--color-danger);
+      color: #ff8a8a;
+      padding: 0.75rem;
+      border-radius: var(--radius-sm);
+      margin-bottom: 1.25rem;
+      font-size: 0.9rem;
+      display: none;
+      text-align: center;
+      font-weight: 500;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-container">
+    <div class="glass-panel login-card animated-fade-in">
+      <div class="login-logo">NET<span>DATA</span></div>
+      <div class="login-title">Planta Externa</div>
+      
+      <div id="errorBox" class="error-box"></div>
+
+      <form id="loginForm">
+        <div class="form-group">
+          <label for="email" class="form-label">Correo Electrónico</label>
+          <input type="email" id="email" class="form-control" placeholder="nombre@instala.xyz" required autocomplete="username">
+        </div>
+        
+        <div class="form-group">
+          <label for="password" class="form-label">Contraseña</label>
+          <input type="password" id="password" class="form-control" placeholder="••••••••" required autocomplete="current-password">
+        </div>
+        
+        <div style="margin-top: 2rem;">
+          <button type="submit" id="submitBtn" class="btn btn-primary" style="width: 100%;">
+            Entrar al Sistema
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="/js/login.js"></script>
+</body>
+</html>

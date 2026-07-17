@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  app_db:
+    image: postgres:15-alpine
+    container_name: olin_pex_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-OlinPexPostgresPass2026!}
+      POSTGRES_DB: ${DB_NAME:-planta_externa}
+    ports:
+      - "5435:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    networks:
+      - olin_network
+
+  app_web:
+    build: .
+    container_name: olin_pex_web
+    restart: always
+    ports:
+      - "3113:3113"
+    environment:
+      - PORT=3113
+      - SESSION_SECRET=${SESSION_SECRET:-elin_pex_super_secret_session_key_2026}
+      - DB_HOST=app_db
+      - DB_PORT=5432
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-OlinPexPostgresPass2026!}
+      - DB_NAME=${DB_NAME:-planta_externa}
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID:-calculadora-olin}
+    depends_on:
+      - app_db
+    networks:
+      - olin_network
+
+volumes:
+  postgres_data:
+
+networks:
+  olin_network:
+    driver: bridge
