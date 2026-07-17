@@ -681,7 +681,88 @@ app.get('/api/tasks/:id', requireAuth, async (req, res) => {
 });
 
 
-// --- PARSER DE ANOTACIONES CON GROQ API (LLAMA 3.3) ---
+// --- CONFIGURACIÓN DE GROQ API Y PARSER (LLAMA 3.3) ---
+
+// Obtener API Key de Groq desde la Base de Datos o Env
+async function getGroqApiKey() {
+  try {
+    const res = await db.query("SELECT value FROM system_settings WHERE key = 'groq_api_key'");
+    if (res.rows.length > 0) {
+      return res.rows[0].value;
+    }
+  } catch (e) {
+    console.error("Error reading groq_api_key from db:", e.message);
+  }
+  return process.env.GROQ_API_KEY;
+}
+
+// Obtener si la API Key está configurada (enmascarada para el frontend)
+app.get('/api/config/groq-key', requireAuth, requireRole(['admin']), async (req, res) => {
+  try {
+    const key = await getGroqApiKey();
+    if (key) {
+      const masked = key.length > 8 ? `${key.substring(0, 4)}...${key.substring(key.length - 4)}` : '***';
+      return res.json({ exists: true, maskedKey: masked });
+    }
+    res.json({ exists: false });
+  } catch (error) {
+    res.status(500).json({ error: 'Error al consultar la clave.' });
+  }
+});
+
+// Guardar la API Key de Groq
+app.post('/api/config/groq-key', requireAuth, requireRole(['admin']), async (req, res) => {
+  const { apiKey } = req.body;
+  if (!apiKey) {
+    return res.status(400).json({ error: 'La clave no puede estar vacía.' });
+  }
+  try {
+    await db.query(
+      `INSERT INTO system_settings (key, value, updated_at) VALUES ('groq_api_key', $1, NOW())
+       ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()`,
+      [apiKey.trim()]
+    );
+    res.json({ success: true });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error al guardar la clave.' });
+  }
+});
+
+// Probar conexión a Groq
+app.post('/api/config/test-groq', requireAuth, requireRole(['admin']), async (req, res) => {
+  let { apiKey } = req.body;
+  if (!apiKey || apiKey.includes('...')) {
+    apiKey = await getGroqApiKey();
+  }
+  if (!apiKey) {
+    return res.status(400).json({ error: 'No se especificó ninguna API Key para probar.' });
+  }
+  try {
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey.trim()}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        messages: [
+          { role: 'user', content: 'responde solo con un JSON: {"status": "ok"}' }
+        ],
+        response_format: { type: 'json_object' }
+      })
+    });
+    if (response.ok) {
+      res.json({ success: true, message: '¡Conexión con Groq exitosa!' });
+    } else {
+      const errText = await response.text();
+      res.status(400).json({ error: `Groq rechazó la clave: ${response.status}. ${errText}` });
+    }
+  } catch (error) {
+    res.status(500).json({ error: `Error al conectar con Groq: ${error.message}` });
+  }
+});
 
 const SYSTEM_PROMPT = `Eres un asistente de IA especializado en la gestión de telecomunicaciones e instalación de fibra óptica. Tu objetivo es actuar como un parser de texto a JSON para extraer información estructurada a partir de anotaciones de trabajo, partes de averías o solicitudes de alta/traslado.
 
@@ -758,7 +839,7 @@ app.post('/api/parse-task', requireAuth, async (req, res) => {
     return res.status(400).json({ error: 'Texto a procesar es requerido.' });
   }
 
-  const groqApiKey = process.env.GROQ_API_KEY;
+  const groqApiKey = await getGroqApiKey();
   if (!groqApiKey) {
     return res.status(503).json({ error: 'La API de Groq no está configurada en el servidor.' });
   }

@@ -432,6 +432,7 @@
           <button type="button" class="btn btn-secondary" data-panel="conceptsPanel" style="padding: 0.5rem 1rem;">Conceptos</button>
           <button type="button" class="btn btn-secondary" data-panel="cablesPanel" style="padding: 0.5rem 1rem;">Cables</button>
           <button type="button" class="btn btn-secondary" data-panel="materialsPanel" style="padding: 0.5rem 1rem;">Materiales</button>
+          <button type="button" class="btn btn-secondary" data-panel="groqPanel" style="padding: 0.5rem 1rem;">API de Groq</button>
         </div>
 
         <!-- 3.1 Panel Usuarios -->
@@ -651,6 +652,27 @@
                 <!-- Rellenado dinámicamente -->
               </tbody>
             </table>
+          </div>
+        </div>
+
+        <!-- 3.6 Panel Groq API -->
+        <div id="groqPanel" class="settings-subpanel" style="display:none;">
+          <h2 style="font-size: 1.25rem; margin-bottom: 1rem; color: var(--color-accent);">Configuración de Groq API</h2>
+          <div class="glass-panel point-item" style="margin-bottom: 1.5rem;">
+            <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1rem;">
+              Configura tu API Key de Groq para que funcione la extracción de textos inteligentes (botón +). Esta clave se almacena de forma segura en tu base de datos PostgreSQL local.
+            </p>
+            <form id="groqForm">
+              <div class="form-group">
+                <label for="groqKeyInput" class="form-label">Groq API Key</label>
+                <input type="password" id="groqKeyInput" class="form-control" placeholder="Escribe tu gsk_..." required autocomplete="off">
+              </div>
+              <div style="display:flex; gap: 0.5rem; justify-content: flex-end; align-items: center;">
+                <span id="groqKeyStatus" style="font-size: 0.85rem; font-weight:600; margin-right: auto; display:none;"></span>
+                <button type="button" id="testGroqBtn" class="btn btn-secondary">Probar Conexión</button>
+                <button type="submit" class="btn btn-primary">Guardar Clave</button>
+              </div>
+            </form>
           </div>
         </div>
 

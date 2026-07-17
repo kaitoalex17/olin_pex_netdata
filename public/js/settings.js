@@ -39,6 +39,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const conceptForm = document.getElementById('conceptForm');
   const cableForm = document.getElementById('cableForm');
   const materialForm = document.getElementById('materialForm');
+  const groqForm = document.getElementById('groqForm');
+  const groqKeyInput = document.getElementById('groqKeyInput');
+  const testGroqBtn = document.getElementById('testGroqBtn');
+  const groqKeyStatus = document.getElementById('groqKeyStatus');
 
   // Estado local para equipos y miembros
   let systemTeams = [];
@@ -91,6 +95,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // 2. Cargar lista de usuarios
       await loadUsersList();
+
+      // 3. Cargar configuración de Groq
+      await loadGroqConfig();
 
     } catch (err) {
       console.error("Error al cargar ajustes:", err);
@@ -392,6 +399,89 @@ document.addEventListener('DOMContentLoaded', () => {
       alert("Material guardado.");
     } else {
       alert("Error al guardar.");
+    }
+  });
+
+  // --- CONFIGURACIÓN Y PRUEBA DE GROQ ---
+
+  async function loadGroqConfig() {
+    try {
+      const res = await fetch('/api/config/groq-key');
+      const data = await res.json();
+      if (data.exists) {
+        groqKeyInput.value = data.maskedKey;
+        groqKeyStatus.textContent = "Clave configurada (Enmascarada)";
+        groqKeyStatus.style.color = "var(--color-success)";
+        groqKeyStatus.style.display = "inline";
+      } else {
+        groqKeyInput.value = '';
+        groqKeyStatus.textContent = "Sin configurar";
+        groqKeyStatus.style.color = "var(--color-danger)";
+        groqKeyStatus.style.display = "inline";
+      }
+    } catch (e) {
+      console.error("Error al cargar la clave de Groq:", e);
+    }
+  }
+
+  testGroqBtn.addEventListener('click', async () => {
+    const apiKey = groqKeyInput.value.trim();
+    if (!apiKey) {
+      alert("Por favor, escribe una API Key para probar.");
+      return;
+    }
+
+    testGroqBtn.disabled = true;
+    testGroqBtn.textContent = "Probando...";
+    groqKeyStatus.style.display = 'none';
+
+    try {
+      const res = await fetch('/api/config/test-groq', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ apiKey })
+      });
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.error);
+
+      alert(data.message || "¡Conexión exitosa con Groq!");
+      groqKeyStatus.textContent = "Conexión exitosa";
+      groqKeyStatus.style.color = "var(--color-success)";
+      groqKeyStatus.style.display = "inline";
+    } catch (err) {
+      alert("Error en la prueba: " + err.message);
+      groqKeyStatus.textContent = "Error de conexión";
+      groqKeyStatus.style.color = "var(--color-danger)";
+      groqKeyStatus.style.display = "inline";
+    } finally {
+      testGroqBtn.disabled = false;
+      testGroqBtn.textContent = "Probar Conexión";
+    }
+  });
+
+  groqForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const apiKey = groqKeyInput.value.trim();
+    if (!apiKey || apiKey.includes('...')) {
+      alert("Introduce una clave válida para guardar (no puede ser la enmascarada).");
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/config/groq-key', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ apiKey })
+      });
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.error);
+
+      alert("API Key de Groq guardada con éxito.");
+      loadGroqConfig();
+    } catch (err) {
+      alert("Error al guardar: " + err.message);
     }
   });
 });

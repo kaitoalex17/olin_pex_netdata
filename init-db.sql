@@ -115,6 +115,14 @@ CREATE TABLE IF NOT EXISTS task_parsed_data (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- 8. Configuración Global del Sistema
+CREATE TABLE IF NOT EXISTS system_settings (
+    key VARCHAR(100) PRIMARY KEY,
+    value TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- --- SEMILLAS INICIALES ---
 
 -- Equipos
