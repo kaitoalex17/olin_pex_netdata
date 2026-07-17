@@ -46,7 +46,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const mantenimientoValueForm = document.getElementById('mantenimientoValueForm');
   const mantenimientoPointsInput = document.getElementById('mantenimientoPointsInput');
   const categoryForm = document.getElementById('categoryForm');
+  const categoryIdInput = document.getElementById('categoryIdInput');
   const categoryNameInput = document.getElementById('categoryNameInput');
+  const cancelCategoryEditBtn = document.getElementById('cancelCategoryEditBtn');
+  const categorySubmitBtn = document.getElementById('categorySubmitBtn');
   const categoriesTableBody = document.getElementById('categoriesTableBody');
 
   // Estado local para equipos y miembros
@@ -563,6 +566,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   categoryForm.addEventListener('submit', async (e) => {
     e.preventDefault();
+    const id = categoryIdInput.value;
     const name = categoryNameInput.value.trim();
     if (!name) return;
 
@@ -570,19 +574,30 @@ document.addEventListener('DOMContentLoaded', () => {
       const res = await fetch('/api/config/image-categories', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name })
+        body: JSON.stringify({ id: id || undefined, name })
       });
       if (res.ok) {
-        categoryNameInput.value = '';
+        resetCategoryForm();
         loadSettingsData();
-        alert("Título de imagen agregado.");
+        alert(id ? "Título de imagen actualizado." : "Título de imagen agregado.");
       } else {
-        alert("Error al agregar.");
+        alert("Error al guardar.");
       }
     } catch (err) {
       alert("Error de conexión.");
     }
   });
+
+  cancelCategoryEditBtn.addEventListener('click', () => {
+    resetCategoryForm();
+  });
+
+  function resetCategoryForm() {
+    categoryIdInput.value = '';
+    categoryNameInput.value = '';
+    cancelCategoryEditBtn.style.display = 'none';
+    categorySubmitBtn.textContent = 'Agregar Categoría';
+  }
 
   function renderCategoriesList(categories) {
     categoriesTableBody.innerHTML = '';
@@ -596,12 +611,27 @@ document.addEventListener('DOMContentLoaded', () => {
       tr.innerHTML = `
         <td>${cat.name}</td>
         <td>
+          <button type="button" class="btn btn-secondary edit-cat-btn" data-id="${cat.id}" data-name="${cat.name}" style="padding:0.25rem 0.5rem; margin-right:0.25rem;">
+            Editar
+          </button>
           <button type="button" class="btn btn-secondary delete-cat-btn" data-id="${cat.id}" style="padding:0.25rem 0.5rem; background:rgba(239, 68, 68, 0.15); border-color:rgba(239, 68, 68, 0.3); color:var(--color-danger);">
             Eliminar
           </button>
         </td>
       `;
       categoriesTableBody.appendChild(tr);
+    });
+
+    categoriesTableBody.querySelectorAll('.edit-cat-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-id');
+        const name = btn.getAttribute('data-name');
+        categoryIdInput.value = id;
+        categoryNameInput.value = name;
+        categorySubmitBtn.textContent = 'Guardar Cambios';
+        cancelCategoryEditBtn.style.display = 'inline-block';
+        categoryNameInput.focus();
+      });
     });
 
     categoriesTableBody.querySelectorAll('.delete-cat-btn').forEach(btn => {

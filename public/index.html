@@ -702,12 +702,14 @@
               Configura las opciones de títulos o categorías de fotos para que los técnicos las clasifiquen al subirlas.
             </p>
             <form id="categoryForm">
+              <input type="hidden" id="categoryIdInput">
               <div class="form-group">
                 <label for="categoryNameInput" class="form-label">Nombre del Título / Categoría</label>
                 <input type="text" id="categoryNameInput" class="form-control" placeholder="Ej: Caja cerrada" required>
               </div>
-              <div style="display:flex; justify-content: flex-end;">
-                <button type="submit" class="btn btn-primary">Agregar Categoría</button>
+              <div style="display:flex; gap: 0.5rem; justify-content: flex-end;">
+                <button type="button" id="cancelCategoryEditBtn" class="btn btn-secondary" style="display:none;">Cancelar</button>
+                <button type="submit" id="categorySubmitBtn" class="btn btn-primary">Agregar Categoría</button>
               </div>
             </form>
           </div>

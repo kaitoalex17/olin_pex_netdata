@@ -1047,12 +1047,16 @@ app.get('/api/config/image-categories', requireAuth, async (req, res) => {
 
 // Guardar categoría de imágenes (Admin)
 app.post('/api/config/image-categories', requireAuth, requireRole(['admin']), async (req, res) => {
-  const { name } = req.body;
+  const { id, name } = req.body;
   if (!name) {
     return res.status(400).json({ error: 'Nombre de categoría requerido.' });
   }
   try {
-    await db.query("INSERT INTO image_categories (name) VALUES ($1) ON CONFLICT (name) DO NOTHING", [name.trim()]);
+    if (id) {
+      await db.query("UPDATE image_categories SET name = $1 WHERE id = $2", [name.trim(), parseInt(id, 10)]);
+    } else {
+      await db.query("INSERT INTO image_categories (name) VALUES ($1) ON CONFLICT (name) DO NOTHING", [name.trim()]);
+    }
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: 'Error al guardar la categoría.' });
