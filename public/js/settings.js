@@ -254,10 +254,19 @@ document.addEventListener('DOMContentLoaded', () => {
         <td style="font-weight:600; color: var(--color-info);">${team.id}</td>
         <td>${team.integrantes}</td>
         <td>
+          <button type="button" class="btn btn-secondary edit-team-btn" data-id="${team.id}" data-members="${team.integrantes}" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">Editar</button>
           <button type="button" class="btn btn-danger delete-team-btn" data-id="${team.id}" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">Eliminar</button>
         </td>
       </tr>
     `).join('');
+
+    document.querySelectorAll('.edit-team-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.getElementById('teamIdInput').value = btn.getAttribute('data-id');
+        document.getElementById('teamMembersInput').value = btn.getAttribute('data-members');
+        document.getElementById('teamIdInput').focus();
+      });
+    });
 
     document.querySelectorAll('.delete-team-btn').forEach(btn => {
       btn.addEventListener('click', async () => {
@@ -295,10 +304,20 @@ document.addEventListener('DOMContentLoaded', () => {
         <td style="color: var(--color-accent); font-weight:700;">${parseFloat(c.valor_puntos).toFixed(2)} pts</td>
         <td>${c.orden}</td>
         <td>
+          <button type="button" class="btn btn-secondary edit-concept-btn" data-id="${c.id}" data-points="${c.valor_puntos}" data-order="${c.orden}" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">Editar</button>
           <button type="button" class="btn btn-danger delete-concept-btn" data-id="${c.id}" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">Eliminar</button>
         </td>
       </tr>
     `).join('');
+
+    document.querySelectorAll('.edit-concept-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.getElementById('conceptIdInput').value = btn.getAttribute('data-id');
+        document.getElementById('conceptPointsInput').value = btn.getAttribute('data-points');
+        document.getElementById('conceptOrderInput').value = btn.getAttribute('data-order');
+        document.getElementById('conceptIdInput').focus();
+      });
+    });
 
     document.querySelectorAll('.delete-concept-btn').forEach(btn => {
       btn.addEventListener('click', async () => {
@@ -337,10 +356,20 @@ document.addEventListener('DOMContentLoaded', () => {
         <td>${c.nombre}</td>
         <td style="color: var(--color-accent); font-weight:700;">${parseFloat(c.puntos).toFixed(4)} pts/m</td>
         <td>
+          <button type="button" class="btn btn-secondary edit-cable-btn" data-id="${c.id}" data-name="${c.nombre}" data-points="${c.puntos}" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">Editar</button>
           <button type="button" class="btn btn-danger delete-cable-btn" data-id="${c.id}" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">Eliminar</button>
         </td>
       </tr>
     `).join('');
+
+    document.querySelectorAll('.edit-cable-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.getElementById('cableIdInput').value = btn.getAttribute('data-id');
+        document.getElementById('cableNameInput').value = btn.getAttribute('data-name');
+        document.getElementById('cablePointsInput').value = btn.getAttribute('data-points');
+        document.getElementById('cableIdInput').focus();
+      });
+    });
 
     document.querySelectorAll('.delete-cable-btn').forEach(btn => {
       btn.addEventListener('click', async () => {
@@ -378,10 +407,19 @@ document.addEventListener('DOMContentLoaded', () => {
         <td style="font-weight:600;">${m.id}</td>
         <td>${m.orden}</td>
         <td>
+          <button type="button" class="btn btn-secondary edit-material-btn" data-id="${m.id}" data-order="${m.orden}" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">Editar</button>
           <button type="button" class="btn btn-danger delete-material-btn" data-id="${m.id}" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">Eliminar</button>
         </td>
       </tr>
     `).join('');
+
+    document.querySelectorAll('.edit-material-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.getElementById('materialIdInput').value = btn.getAttribute('data-id');
+        document.getElementById('materialOrderInput').value = btn.getAttribute('data-order');
+        document.getElementById('materialIdInput').focus();
+      });
+    });
 
     document.querySelectorAll('.delete-material-btn').forEach(btn => {
       btn.addEventListener('click', async () => {
