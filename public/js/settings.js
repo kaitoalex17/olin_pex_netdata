@@ -45,6 +45,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const groqKeyStatus = document.getElementById('groqKeyStatus');
   const mantenimientoValueForm = document.getElementById('mantenimientoValueForm');
   const mantenimientoPointsInput = document.getElementById('mantenimientoPointsInput');
+  const imageMaxSizeInput = document.getElementById('imageMaxSizeInput');
+  const imageQualityInput = document.getElementById('imageQualityInput');
   const categoryForm = document.getElementById('categoryForm');
   const categoryIdInput = document.getElementById('categoryIdInput');
   const categoryNameInput = document.getElementById('categoryNameInput');
@@ -101,6 +103,17 @@ document.addEventListener('DOMContentLoaded', () => {
       
       if (config.settings?.mantenimiento_value) {
         mantenimientoPointsInput.value = config.settings.mantenimiento_value;
+        if (window.catalogConcepts) {
+          window.catalogConcepts['Tarea de Mantenimiento'] = parseFloat(config.settings.mantenimiento_value);
+        }
+      }
+      if (config.settings?.image_max_size) {
+        imageMaxSizeInput.value = config.settings.image_max_size;
+        window.imageMaxSize = parseInt(config.settings.image_max_size, 10);
+      }
+      if (config.settings?.image_quality) {
+        imageQualityInput.value = config.settings.image_quality;
+        window.imageQuality = parseFloat(config.settings.image_quality);
       }
 
       // Rellenar desplegables de equipos en formularios
@@ -540,19 +553,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
   mantenimientoValueForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const value = parseFloat(mantenimientoPointsInput.value);
-    if (isNaN(value)) {
-      alert("Por favor introduce un valor numérico válido.");
+    const maintValue = parseFloat(mantenimientoPointsInput.value);
+    const maxSize = parseInt(imageMaxSizeInput.value, 10);
+    const quality = parseFloat(imageQualityInput.value);
+
+    if (isNaN(maintValue) || isNaN(maxSize) || isNaN(quality)) {
+      alert("Por favor introduce valores válidos.");
       return;
     }
+
     try {
-      const res = await fetch('/api/config/mantenimiento-value', {
+      const res = await fetch('/api/config/settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ value })
+        body: JSON.stringify({
+          mantenimiento_value: maintValue,
+          image_max_size: maxSize,
+          image_quality: quality
+        })
       });
       if (res.ok) {
-        alert("Valor de mantenimiento guardado con éxito.");
+        alert("Ajustes generales guardados con éxito.");
         loadSettingsData();
       } else {
         alert("Error al guardar.");

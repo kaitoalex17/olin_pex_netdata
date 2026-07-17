@@ -217,7 +217,9 @@ ON CONFLICT (id) DO UPDATE SET orden = EXCLUDED.orden;
 
 -- 11. Ajustes globales del sistema
 INSERT INTO system_settings (key, value) VALUES
-('mantenimiento_value', '11.95')
+('mantenimiento_value', '11.95'),
+('image_max_size', '1600'),
+('image_quality', '0.80')
 ON CONFLICT (key) DO NOTHING;
 
 -- 12. Categorías de Imágenes por Defecto

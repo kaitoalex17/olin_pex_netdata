@@ -42,6 +42,34 @@ document.addEventListener('DOMContentLoaded', () => {
   const loadingOverlay = document.getElementById('loadingOverlay');
   const logoutLink = document.getElementById('logoutLink');
   const themeSelector = document.getElementById('themeSelector');
+
+  // Modales de Imágenes
+  const imageViewerModal = document.getElementById('imageViewerModal');
+  const imageViewerSource = document.getElementById('imageViewerSource');
+  const imageViewerTitle = document.getElementById('imageViewerTitle');
+  const downloadImageBtn = document.getElementById('downloadImageBtn');
+  const closeImageViewerBtn = document.getElementById('closeImageViewerBtn');
+  const closeImageViewerBtn2 = document.getElementById('closeImageViewerBtn2');
+
+  const closeViewer = () => {
+    imageViewerModal.classList.remove('active');
+    imageViewerSource.src = '';
+  };
+  if (closeImageViewerBtn) closeImageViewerBtn.addEventListener('click', closeViewer);
+  if (closeImageViewerBtn2) closeImageViewerBtn2.addEventListener('click', closeViewer);
+  if (imageViewerModal) {
+    imageViewerModal.addEventListener('click', (e) => {
+      if (e.target === imageViewerModal) closeViewer();
+    });
+  }
+
+  window.openImageViewer = function(url, title = 'Visualizar Imagen') {
+    imageViewerSource.src = url;
+    imageViewerTitle.textContent = title;
+    downloadImageBtn.href = url;
+    downloadImageBtn.download = title.replace(/\s+/g, '_') + '.jpg';
+    imageViewerModal.classList.add('active');
+  };
   
   // Elementos del formulario
   const taskNumberInput = document.getElementById('taskNumber');
@@ -140,7 +168,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // --- CONFIGURACIÓN DE SESIÓN Y USUARIO ---
   let currentUser = null;
   let catalogTeams = {};
-  let catalogConcepts = {};
+  let catalogConcepts = {}; window.catalogConcepts = catalogConcepts;
   let catalogCables = [];
   let catalogMaterials = [];
   let commonConceptsList = [];
@@ -215,6 +243,10 @@ document.addEventListener('DOMContentLoaded', () => {
       // Cargar valor de mantenimiento dinámico
       const maintVal = parseFloat(data.settings?.mantenimiento_value || 11.95);
       catalogConcepts['Tarea de Mantenimiento'] = maintVal;
+
+      // Cargar configuración de imágenes dinámicas
+      window.imageMaxSize = parseInt(data.settings?.image_max_size || 1600, 10);
+      window.imageQuality = parseFloat(data.settings?.image_quality || 0.80);
 
       // Guardar categorías de imágenes en el estado global
       window.catalogImageCategories = data.imageCategories || [];
@@ -1257,7 +1289,7 @@ document.addEventListener('DOMContentLoaded', () => {
   taskDateInput.value = new Date().toISOString().split('T')[0];
 
   // --- HELPER DE COMPRESIÓN DE IMÁGENES EN CLIENTE ---
-  function compressImage(file, maxWidth = 1200, maxHeight = 1200, quality = 0.75) {
+  function compressImage(file, maxWidth = window.imageMaxSize || 1600, maxHeight = window.imageMaxSize || 1600, quality = window.imageQuality || 0.80) {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.readAsDataURL(file);
@@ -1313,7 +1345,12 @@ document.addEventListener('DOMContentLoaded', () => {
     thumb.style.border = '1px solid var(--border-color)';
     thumb.style.overflow = 'hidden';
     thumb.style.background = `url(${imgData.image_path}) center/cover no-repeat`;
+    thumb.style.cursor = 'pointer';
     
+    thumb.addEventListener('click', () => {
+      window.openImageViewer(imgData.image_path, imgData.title || 'Imagen de Punto');
+    });
+
     if (imgData.title) {
       thumb.title = imgData.title;
     }

@@ -1037,20 +1037,35 @@ app.get('/api/config/mantenimiento-value', requireAuth, async (req, res) => {
 });
 
 // Guardar valor de mantenimiento (Admin)
-app.post('/api/config/mantenimiento-value', requireAuth, requireRole(['admin']), async (req, res) => {
-  const { value } = req.body;
-  if (value === undefined || isNaN(parseFloat(value))) {
-    return res.status(400).json({ error: 'Valor numérico requerido.' });
-  }
+// Guardar ajustes generales del sistema (Admin)
+app.post('/api/config/settings', requireAuth, requireRole(['admin']), async (req, res) => {
+  const { mantenimiento_value, image_max_size, image_quality } = req.body;
   try {
-    await db.query(
-      `INSERT INTO system_settings (key, value, updated_at) VALUES ('mantenimiento_value', $1, NOW())
-       ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()`,
-      [value.toString()]
-    );
+    if (mantenimiento_value !== undefined) {
+      await db.query(
+        `INSERT INTO system_settings (key, value, updated_at) VALUES ('mantenimiento_value', $1, NOW())
+         ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()`,
+        [mantenimiento_value.toString()]
+      );
+    }
+    if (image_max_size !== undefined) {
+      await db.query(
+        `INSERT INTO system_settings (key, value, updated_at) VALUES ('image_max_size', $1, NOW())
+         ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()`,
+        [image_max_size.toString()]
+      );
+    }
+    if (image_quality !== undefined) {
+      await db.query(
+        `INSERT INTO system_settings (key, value, updated_at) VALUES ('image_quality', $1, NOW())
+         ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()`,
+        [image_quality.toString()]
+      );
+    }
     res.json({ success: true });
   } catch (e) {
-    res.status(500).json({ error: 'Error al guardar valor de mantenimiento.' });
+    console.error("Error al guardar ajustes generales:", e);
+    res.status(500).json({ error: 'Error al guardar los ajustes generales.' });
   }
 });
 

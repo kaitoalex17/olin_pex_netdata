@@ -467,7 +467,7 @@
           <button type="button" class="btn btn-secondary" data-panel="conceptsPanel" style="padding: 0.5rem 1rem;">Conceptos</button>
           <button type="button" class="btn btn-secondary" data-panel="cablesPanel" style="padding: 0.5rem 1rem;">Cables</button>
           <button type="button" class="btn btn-secondary" data-panel="materialsPanel" style="padding: 0.5rem 1rem;">Materiales</button>
-          <button type="button" class="btn btn-secondary" data-panel="mantenimientoPanel" style="padding: 0.5rem 1rem;">Mantenimiento</button>
+          <button type="button" class="btn btn-secondary" data-panel="mantenimientoPanel" style="padding: 0.5rem 1rem;">Ajustes Generales</button>
           <button type="button" class="btn btn-secondary" data-panel="categoriesPanel" style="padding: 0.5rem 1rem;">Títulos Imágenes</button>
           <button type="button" class="btn btn-secondary" data-panel="groqPanel" style="padding: 0.5rem 1rem;">API de Groq</button>
         </div>
@@ -692,20 +692,28 @@
           </div>
         </div>
 
-        <!-- 3.7 Panel Mantenimiento Configurable -->
+        <!-- 3.7 Panel Ajustes Generales -->
         <div id="mantenimientoPanel" class="settings-subpanel" style="display:none;">
-          <h2 style="font-size: 1.25rem; margin-bottom: 1rem; color: var(--color-accent);">Valor de Tarea de Mantenimiento</h2>
+          <h2 style="font-size: 1.25rem; margin-bottom: 1rem; color: var(--color-accent);">Ajustes Generales de la Aplicación</h2>
           <div class="glass-panel point-item" style="margin-bottom: 1.5rem;">
             <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1rem;">
-              Define los puntos asignados de forma automática al marcar "Tarea de Mantenimiento" en el formulario.
+              Configura los valores globales del sistema, incluyendo los puntos de mantenimiento y la resolución/calidad de compresión de las imágenes.
             </p>
             <form id="mantenimientoValueForm">
               <div class="form-group">
-                <label for="mantenimientoPointsInput" class="form-label">Puntos por Defecto</label>
+                <label for="mantenimientoPointsInput" class="form-label">Puntos por Tarea de Mantenimiento</label>
                 <input type="number" id="mantenimientoPointsInput" class="form-control" step="0.01" min="0" placeholder="Ej: 11.95" required>
               </div>
+              <div class="form-group">
+                <label for="imageMaxSizeInput" class="form-label">Resolución Máxima de Imagen (píxeles - WhatsApp HD es 1600)</label>
+                <input type="number" id="imageMaxSizeInput" class="form-control" min="100" max="4000" placeholder="Ej: 1600" required>
+              </div>
+              <div class="form-group">
+                <label for="imageQualityInput" class="form-label">Calidad de Compresión de Imagen (0.1 a 1.0)</label>
+                <input type="number" id="imageQualityInput" class="form-control" step="0.05" min="0.1" max="1.0" placeholder="Ej: 0.80" required>
+              </div>
               <div style="display:flex; justify-content: flex-end;">
-                <button type="submit" class="btn btn-primary">Guardar Puntos</button>
+                <button type="submit" class="btn btn-primary">Guardar Ajustes</button>
               </div>
             </form>
           </div>
@@ -817,6 +825,25 @@
         Detalle del mensaje.
       </p>
       <button type="button" id="alertModalOkBtn" class="btn btn-primary" style="padding: 0.5rem 2rem;">Aceptar</button>
+    </div>
+  </div>
+
+  <!-- 4. Modal de Visualización de Imagen -->
+  <div id="imageViewerModal" class="modal-overlay">
+    <div class="modal-container" style="max-width: 700px; text-align: center; display: flex; flex-direction: column; gap: 1rem;">
+      <div class="modal-header">
+        <h3 class="modal-title" id="imageViewerTitle">Visualizar Imagen</h3>
+        <button type="button" class="modal-close" id="closeImageViewerBtn">&times;</button>
+      </div>
+      <div style="flex-grow: 1; display: flex; justify-content: center; align-items: center; max-height: 60vh; overflow: hidden; background: rgba(0,0,0,0.5); border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+        <img id="imageViewerSource" src="" alt="Vista previa" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+      </div>
+      <div style="display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1rem;">
+        <a id="downloadImageBtn" href="" download="" class="btn btn-primary" style="display: inline-flex; align-items: center; gap: 0.5rem;">
+          📥 Descargar Imagen
+        </a>
+        <button type="button" id="closeImageViewerBtn2" class="btn btn-secondary">Cerrar</button>
+      </div>
     </div>
   </div>
 
