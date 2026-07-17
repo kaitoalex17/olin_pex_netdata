@@ -24,6 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // --- ELEMENTOS DEL DOM ---
   const loadingOverlay = document.getElementById('loadingOverlay');
   const logoutLink = document.getElementById('logoutLink');
+  const themeSelector = document.getElementById('themeSelector');
   
   // Elementos del formulario
   const taskNumberInput = document.getElementById('taskNumber');
@@ -139,6 +140,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       currentUser = data.user;
       setupRoleVisibility(currentUser.role);
+      applyTheme(currentUser.theme);
     } catch (err) {
       console.error(err);
       window.location.href = '/login';
@@ -515,7 +517,19 @@ document.addEventListener('DOMContentLoaded', () => {
       <button type="button" class="btn btn-secondary add-concept-btn" style="width: 100%; margin-top:1rem; padding: 0.5rem; font-size:0.8rem;">
         + Agregar Concepto
       </button>
-      <div class="form-group" style="margin-top: 1rem; margin-bottom: 0;">
+      
+      <!-- Botones de Acción para Nota e Imágenes -->
+      <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+        <button type="button" class="btn btn-secondary toggle-comment-btn" style="flex: 1; padding: 0.35rem; font-size: 0.75rem; background: rgba(245, 158, 11, 0.05); border-color: rgba(245, 158, 11, 0.2); color: var(--color-warning);">
+          📝 Nota/Comentario
+        </button>
+        <button type="button" class="btn btn-secondary toggle-images-btn" style="flex: 1; padding: 0.35rem; font-size: 0.75rem; background: rgba(0, 237, 255, 0.05); border-color: rgba(0, 237, 255, 0.2); color: var(--color-info);">
+          📸 Fotos / Imágenes
+        </button>
+      </div>
+
+      <!-- Contenedor del Comentario (Oculto por defecto) -->
+      <div class="comment-container-el" style="display: none; margin-top: 1rem;">
         <label class="form-label" style="font-size:0.8rem; display:block; margin-bottom:0.25rem;">Comentario del Punto</label>
         <input type="text" class="form-control point-comment" style="font-size:0.8rem; padding:0.4rem; background:rgba(0,0,0,0.25); color:#fff; border:1px solid var(--border-color);" placeholder="Comentario opcional para este punto (ej. Fusiones CTO 3)...">
       </div>
@@ -527,6 +541,7 @@ document.addEventListener('DOMContentLoaded', () => {
     imagesArea.style.marginTop = '1.5rem';
     imagesArea.style.borderTop = '1px solid var(--border-color)';
     imagesArea.style.paddingTop = '1rem';
+    imagesArea.style.display = 'none';
     
     const catOptions = (window.catalogImageCategories || [])
       .map(cat => `<option value="${cat.name}">${cat.name}</option>`)
@@ -609,6 +624,24 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
+    const toggleCommentBtn = div.querySelector('.toggle-comment-btn');
+    const toggleImagesBtn = div.querySelector('.toggle-images-btn');
+    const commentContainerEl = div.querySelector('.comment-container-el');
+
+    toggleCommentBtn.addEventListener('click', () => {
+      const isHidden = commentContainerEl.style.display === 'none';
+      commentContainerEl.style.display = isHidden ? 'block' : 'none';
+      toggleCommentBtn.style.background = isHidden ? 'rgba(245, 158, 11, 0.2)' : 'rgba(245, 158, 11, 0.05)';
+      toggleCommentBtn.style.borderColor = isHidden ? 'var(--color-warning)' : 'rgba(245, 158, 11, 0.2)';
+    });
+
+    toggleImagesBtn.addEventListener('click', () => {
+      const isHidden = imagesArea.style.display === 'none';
+      imagesArea.style.display = isHidden ? 'block' : 'none';
+      toggleImagesBtn.style.background = isHidden ? 'rgba(0, 237, 255, 0.2)' : 'rgba(0, 237, 255, 0.05)';
+      toggleImagesBtn.style.borderColor = isHidden ? 'var(--color-info)' : 'rgba(0, 237, 255, 0.2)';
+    });
+
     pointSectionsDiv.appendChild(div);
 
     const locationSelect = div.querySelector('.point-location');
@@ -629,6 +662,11 @@ document.addEventListener('DOMContentLoaded', () => {
       const commentInput = div.querySelector('.point-comment');
       if (commentInput) {
         commentInput.value = pointData.comentario || '';
+        if (pointData.comentario) {
+          commentContainerEl.style.display = 'block';
+          toggleCommentBtn.style.background = 'rgba(245, 158, 11, 0.2)';
+          toggleCommentBtn.style.borderColor = 'var(--color-warning)';
+        }
       }
       if (pointData.conceptos && pointData.conceptos.length > 0) {
         pointData.conceptos.forEach(c => addConceptRow(conceptsContainer, c));
@@ -1329,6 +1367,15 @@ document.addEventListener('DOMContentLoaded', () => {
           const thumbnailsContainer = pointCard.querySelector('.thumbnails-container');
           if (thumbnailsContainer) {
             renderThumbnail(thumbnailsContainer, img, taskId, img.point_id);
+            
+            // Mostrar contenedor e iluminar botón si tiene imágenes cargadas
+            const imagesArea = pointCard.querySelector('.point-images-area');
+            const toggleImagesBtn = pointCard.querySelector('.toggle-images-btn');
+            if (imagesArea) imagesArea.style.display = 'block';
+            if (toggleImagesBtn) {
+              toggleImagesBtn.style.background = 'rgba(0, 237, 255, 0.2)';
+              toggleImagesBtn.style.borderColor = 'var(--color-info)';
+            }
           }
         }
       });
@@ -1362,6 +1409,40 @@ document.addEventListener('DOMContentLoaded', () => {
       isCheckingTask = false;
     }
   };
+
+  // --- CONTROL DE TEMAS ---
+  function applyTheme(themeName) {
+    document.body.classList.forEach(className => {
+      if (className.startsWith('theme-')) {
+        document.body.classList.remove(className);
+      }
+    });
+    
+    if (themeName && themeName !== 'default') {
+      document.body.classList.add('theme-' + themeName);
+    }
+    
+    if (themeSelector) {
+      themeSelector.value = themeName || 'default';
+    }
+  }
+
+  if (themeSelector) {
+    themeSelector.addEventListener('change', async () => {
+      const selectedTheme = themeSelector.value;
+      applyTheme(selectedTheme);
+      
+      try {
+        await fetch('/api/user/theme', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ theme: selectedTheme })
+        });
+      } catch (e) {
+        console.error("Error al guardar tema:", e);
+      }
+    });
+  }
 
   // --- ARRANQUE DE LA APP ---
   async function startup() {

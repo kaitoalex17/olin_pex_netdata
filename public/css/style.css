@@ -412,3 +412,70 @@ body {
 .badge-coordinador { background: rgba(0, 237, 255, 0.2); color: var(--color-info); border: 1px solid rgba(0, 237, 255, 0.3); }
 .badge-gestor { background: rgba(245, 158, 11, 0.2); color: var(--color-warning); border: 1px solid rgba(245, 158, 11, 0.3); }
 .badge-tecnico { background: rgba(16, 185, 129, 0.2); color: var(--color-success); border: 1px solid rgba(16, 185, 129, 0.3); }
+
+/* ==========================================================================
+   TEMAS ADICIONALES (PERSONALIZACIÓN)
+   ========================================================================== */
+
+/* 1. Midnight Blue */
+body.theme-midnight {
+  --bg-app: #080f1a;
+  --bg-app-gradient: radial-gradient(circle at 50% 0%, #112240 0%, #080f1a 100%);
+  --bg-surface: rgba(17, 34, 64, 0.45);
+  --bg-surface-solid: #112240;
+  --border-color: rgba(59, 130, 246, 0.25);
+  --color-accent: #3b82f6;      /* Royal Blue */
+  --color-info: #60a5fa;        /* Soft Blue */
+  --glow-accent: 0 0 15px rgba(59, 130, 246, 0.35);
+  --glow-cyan: 0 0 15px rgba(96, 165, 250, 0.35);
+}
+
+/* 2. Emerald Forest */
+body.theme-emerald {
+  --bg-app: #05140b;
+  --bg-app-gradient: radial-gradient(circle at 50% 0%, #0c2e1a 0%, #05140b 100%);
+  --bg-surface: rgba(12, 46, 26, 0.45);
+  --bg-surface-solid: #0c2e1a;
+  --border-color: rgba(16, 185, 129, 0.25);
+  --color-accent: #10b981;      /* Esmeralda */
+  --color-info: #34d399;        /* Menta */
+  --glow-accent: 0 0 15px rgba(16, 185, 129, 0.35);
+  --glow-cyan: 0 0 15px rgba(52, 211, 153, 0.35);
+}
+
+/* 3. Sunset Orchid */
+body.theme-sunset {
+  --bg-app: #140514;
+  --bg-app-gradient: radial-gradient(circle at 50% 0%, #2e0c2e 0%, #140514 100%);
+  --bg-surface: rgba(46, 12, 46, 0.45);
+  --bg-surface-solid: #2e0c2e;
+  --border-color: rgba(168, 85, 247, 0.25);
+  --color-accent: #f97316;      /* Naranja Sunset */
+  --color-info: #c084fc;        /* Orquídea */
+  --glow-accent: 0 0 15px rgba(249, 115, 22, 0.35);
+  --glow-cyan: 0 0 15px rgba(192, 132, 252, 0.35);
+}
+
+/* 4. Stealth Carbon */
+body.theme-carbon {
+  --bg-app: #121212;
+  --bg-app-gradient: radial-gradient(circle at 50% 0%, #2d2d2d 0%, #121212 100%);
+  --bg-surface: rgba(45, 45, 45, 0.45);
+  --bg-surface-solid: #2d2d2d;
+  --border-color: rgba(255, 255, 255, 0.12);
+  --color-accent: #f1f5f9;      /* Blanco Platino */
+  --color-info: #cbd5e1;        /* Gris Pizarra */
+  --glow-accent: 0 0 15px rgba(241, 245, 249, 0.15);
+  --glow-cyan: 0 0 15px rgba(203, 213, 225, 0.15);
+}
+
+/* Corregir contraste de dropdowns y opciones */
+select.form-control option, select.form-control option:checked {
+  background-color: var(--bg-surface-solid, #03282c) !important;
+  color: var(--text-primary, #ffffff) !important;
+}
+
+/* Transición de colores de tema suave */
+body {
+  transition: background 0.3s ease, background-image 0.3s ease, color 0.3s ease;
+}

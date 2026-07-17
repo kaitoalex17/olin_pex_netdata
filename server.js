@@ -137,6 +137,7 @@ app.post('/api/auth/login', async (req, res) => {
     req.session.userRole = user.role;
     req.session.teamId = user.team_id;
     req.session.associatedMember = user.associated_member;
+    req.session.userTheme = user.theme || 'default';
 
     res.json({
       success: true,
@@ -145,7 +146,8 @@ app.post('/api/auth/login', async (req, res) => {
         email: user.email,
         role: user.role,
         team_id: user.team_id,
-        associated_member: user.associated_member
+        associated_member: user.associated_member,
+        theme: user.theme || 'default'
       }
     });
   } catch (error) {
@@ -174,11 +176,28 @@ app.get('/api/auth/session', (req, res) => {
         email: req.session.userEmail,
         role: req.session.userRole,
         team_id: req.session.teamId,
-        associated_member: req.session.associatedMember
+        associated_member: req.session.associatedMember,
+        theme: req.session.userTheme || 'default'
       }
     });
   } else {
     res.json({ loggedIn: false });
+  }
+});
+
+// Actualizar Preferencia de Tema
+app.post('/api/user/theme', requireAuth, async (req, res) => {
+  const { theme } = req.body;
+  if (!theme) {
+    return res.status(400).json({ error: 'Tema requerido.' });
+  }
+  try {
+    await db.query('UPDATE users SET theme = $1 WHERE id = $2', [theme, req.session.userId]);
+    req.session.userTheme = theme;
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Error al guardar tema:", error);
+    res.status(500).json({ error: 'Error al actualizar preferencia de tema.' });
   }
 });
 

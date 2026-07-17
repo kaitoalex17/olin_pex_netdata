@@ -38,6 +38,8 @@ CREATE TABLE IF NOT EXISTS users (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+ALTER TABLE users ADD COLUMN IF NOT EXISTS theme VARCHAR(50) DEFAULT 'default';
+
 -- 3. Conceptos de Trabajo (Baremos)
 CREATE TABLE IF NOT EXISTS concepts (
     id VARCHAR(100) PRIMARY KEY,
