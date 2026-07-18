@@ -8,6 +8,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Iconos Lucide -->
+  <script src="https://unpkg.com/lucide@latest"></script>
   <!-- Estilos del Tema Olin -->
   <link rel="stylesheet" href="/css/style.css">
   <style>
@@ -92,14 +94,6 @@
     <div class="nav-brand">NET<span>DATA</span></div>
     
     <div style="display: flex; align-items: center; gap: 0.75rem;">
-      <select id="themeSelector" style="background: rgba(0, 0, 0, 0.4); border: 1px solid var(--border-color); color: #fff; padding: 0.35rem 0.6rem; border-radius: var(--radius-sm); font-size: 0.8rem; cursor: pointer; outline: none; font-family: var(--font-sans); font-weight: 600;">
-        <option value="default">🌐 Cyber Neon</option>
-        <option value="midnight">🌌 Midnight Blue</option>
-        <option value="emerald">🌲 Emerald Forest</option>
-        <option value="sunset">🌅 Sunset Orchid</option>
-        <option value="carbon">🕶️ Stealth Carbon</option>
-      </select>
-      
       <button type="button" class="menu-toggle" id="menuToggleBtn" aria-label="Abrir menú">
         <span class="bar"></span>
         <span class="bar"></span>
@@ -108,11 +102,11 @@
     </div>
 
     <ul class="nav-links" id="navLinks">
-      <li><a class="nav-link active" data-tab="formTab">Formulario</a></li>
-      <li><a class="nav-link" data-tab="ordersTab" id="navOrdersLink">Órdenes</a></li>
-      <li><a class="nav-link" data-tab="reportsTab" id="navReportsLink" style="display:none;">Informes</a></li>
-      <li><a class="nav-link" data-tab="settingsTab" id="navSettingsLink" style="display:none;">Ajustes</a></li>
-      <li><a class="nav-link logout" id="logoutLink">Salir</a></li>
+      <li><a class="nav-link active" data-tab="formTab"><i data-lucide="file-text" style="width: 15px; height: 15px; vertical-align: middle; margin-right: 4px;"></i>Formulario</a></li>
+      <li><a class="nav-link" data-tab="ordersTab" id="navOrdersLink"><i data-lucide="list" style="width: 15px; height: 15px; vertical-align: middle; margin-right: 4px;"></i>Órdenes</a></li>
+      <li><a class="nav-link" data-tab="reportsTab" id="navReportsLink" style="display:none;"><i data-lucide="bar-chart-2" style="width: 15px; height: 15px; vertical-align: middle; margin-right: 4px;"></i>Informes</a></li>
+      <li><a class="nav-link" data-tab="settingsTab" id="navSettingsLink" style="display:none;"><i data-lucide="settings" style="width: 15px; height: 15px; vertical-align: middle; margin-right: 4px;"></i>Ajustes</a></li>
+      <li><a class="nav-link logout" id="logoutLink"><i data-lucide="log-out" style="width: 15px; height: 15px; vertical-align: middle; margin-right: 4px;"></i>Salir</a></li>
     </ul>
   </header>
 
@@ -389,15 +383,15 @@
 
         <!-- NOTA PARA TÉCNICOS (Solo visible si no es admin/coordinador/gestor) -->
         <div id="tecnicoReportsNote" style="display: none; text-align: center; margin-bottom: 2rem; padding: 1rem; background: rgba(0,237,255,0.05); border-radius: var(--radius-sm); border: 1px solid rgba(0,237,255,0.2);">
-          <p style="font-size: 0.85rem; color: var(--color-info); font-weight: 600;">
-            🏆 Tabla de Clasificación PEX y Estadísticas del Mes Actual
+          <p style="font-size: 0.85rem; color: var(--color-info); font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 0.35rem;">
+            <i data-lucide="award" style="width: 16px; height: 16px;"></i> Tabla de Clasificación PEX y Estadísticas del Mes Actual
           </p>
         </div>
 
         <!-- SECCIÓN 1: LEADERBOARD / RANKING DE EQUIPOS (PÚBLICO) -->
         <div style="margin-bottom: 2.5rem;">
           <h2 style="font-family: var(--font-display); font-size: 1.25rem; margin-bottom: 1rem; color: var(--color-warning); display: flex; align-items: center; gap: 0.5rem;">
-            🏆 Ranking de Equipos <span style="font-size: 0.8rem; font-weight:normal; color: var(--text-secondary);">(Leaderboard)</span>
+            <i data-lucide="trophy" style="width: 20px; height: 20px; color: var(--color-warning);"></i> Ranking de Equipos <span style="font-size: 0.8rem; font-weight:normal; color: var(--text-secondary);">(Leaderboard)</span>
           </h2>
           <div id="leaderboardContainer" style="display: flex; flex-direction: column; gap: 0.75rem;">
             <!-- Ranking de equipos se cargará dinámicamente -->
@@ -406,8 +400,8 @@
 
         <!-- SECCIÓN 2: METAS DEL MES (PÚBLICO) -->
         <div style="margin-bottom: 2.5rem;">
-          <h2 style="font-family: var(--font-display); font-size: 1.25rem; margin-bottom: 1rem; color: var(--color-info);">
-            🎯 Meta Mensual del Equipo
+          <h2 style="font-family: var(--font-display); font-size: 1.25rem; margin-bottom: 1rem; color: var(--color-info); display: flex; align-items: center; gap: 0.5rem;">
+            <i data-lucide="target" style="width: 20px; height: 20px; color: var(--color-info);"></i> Meta Mensual del Equipo
           </h2>
           <div class="glass-panel point-item" style="padding: 1.25rem;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
@@ -425,8 +419,8 @@
 
         <!-- SECCIÓN 3: CONSUMO DE MATERIALES (PÚBLICO) -->
         <div style="margin-bottom: 2.5rem;">
-          <h2 style="font-family: var(--font-display); font-size: 1.25rem; margin-bottom: 1rem; color: var(--color-accent);">
-            📦 Gasto Consolidado de Materiales
+          <h2 style="font-family: var(--font-display); font-size: 1.25rem; margin-bottom: 1rem; color: var(--color-accent); display: flex; align-items: center; gap: 0.5rem;">
+            <i data-lucide="package" style="width: 20px; height: 20px; color: var(--color-accent);"></i> Gasto Consolidado de Materiales
           </h2>
           <div class="table-wrapper">
             <table class="glass-table">
@@ -447,8 +441,8 @@
 
         <!-- SECCIÓN 4: DETALLE DE TAREAS (SOLO PARA ADMINISTRADORES/GESTORES) -->
         <div id="adminReportsDetailsSection" style="margin-top: 2rem;">
-          <h2 style="font-family: var(--font-display); font-size: 1.25rem; margin-bottom: 1rem; color: var(--color-info);">
-            📋 Listado de Tareas Realizadas
+          <h2 style="font-family: var(--font-display); font-size: 1.25rem; margin-bottom: 1rem; color: var(--color-info); display: flex; align-items: center; gap: 0.5rem;">
+            <i data-lucide="clipboard-list" style="width: 20px; height: 20px; color: var(--color-info);"></i> Listado de Tareas Realizadas
           </h2>
           <div class="table-wrapper">
             <table class="glass-table">
@@ -484,11 +478,11 @@
         
         <!-- Selector de Vista (Segment Control) -->
         <div style="display: flex; background: rgba(0,0,0,0.3); padding: 4px; border-radius: var(--radius-sm); margin-bottom: 2rem; border: 1px solid var(--border-color);">
-          <button type="button" class="btn active-view-btn" id="toggleListViewBtn" style="flex: 1; padding: 0.5rem; border: none; font-size: 0.85rem; font-weight: 600; cursor: pointer; border-radius: var(--radius-sm); background: var(--color-info); color: #000; transition: all 0.2s;">
-            📋 Listado de Órdenes
+          <button type="button" class="btn active-view-btn" id="toggleListViewBtn" style="flex: 1; padding: 0.5rem; border: none; font-size: 0.85rem; font-weight: 600; cursor: pointer; border-radius: var(--radius-sm); background: var(--color-info); color: #000; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.35rem;">
+            <i data-lucide="list" style="width: 14px; height: 14px;"></i> Listado de Órdenes
           </button>
-          <button type="button" class="btn" id="toggleCalendarViewBtn" style="flex: 1; padding: 0.5rem; border: none; font-size: 0.85rem; font-weight: 600; cursor: pointer; border-radius: var(--radius-sm); background: transparent; color: var(--text-secondary); transition: all 0.2s;">
-            📅 Vista Calendario
+          <button type="button" class="btn" id="toggleCalendarViewBtn" style="flex: 1; padding: 0.5rem; border: none; font-size: 0.85rem; font-weight: 600; cursor: pointer; border-radius: var(--radius-sm); background: transparent; color: var(--text-secondary); transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.35rem;">
+            <i data-lucide="calendar" style="width: 14px; height: 14px;"></i> Vista Calendario
           </button>
         </div>
 
@@ -570,15 +564,16 @@
         <h1 style="font-family: var(--font-display); font-size: 1.8rem; margin-bottom: 2rem; color: var(--color-info); text-align: center;">Panel de Ajustes</h1>
         
         <!-- Navbar interno de Ajustes -->
-        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 2rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem;">
-          <button type="button" class="btn btn-secondary active-settings-btn" data-panel="usersPanel" style="padding: 0.5rem 1rem;">Usuarios</button>
-          <button type="button" class="btn btn-secondary" data-panel="teamsPanel" style="padding: 0.5rem 1rem;">Equipos</button>
-          <button type="button" class="btn btn-secondary" data-panel="conceptsPanel" style="padding: 0.5rem 1rem;">Conceptos</button>
-          <button type="button" class="btn btn-secondary" data-panel="cablesPanel" style="padding: 0.5rem 1rem;">Cables</button>
-          <button type="button" class="btn btn-secondary" data-panel="materialsPanel" style="padding: 0.5rem 1rem;">Materiales</button>
-          <button type="button" class="btn btn-secondary" data-panel="mantenimientoPanel" style="padding: 0.5rem 1rem;">Ajustes Generales</button>
-          <button type="button" class="btn btn-secondary" data-panel="categoriesPanel" style="padding: 0.5rem 1rem;">Títulos Imágenes</button>
-          <button type="button" class="btn btn-secondary" data-panel="groqPanel" style="padding: 0.5rem 1rem;">API de Groq</button>
+        <div id="settingsNavbar" style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 2rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem;">
+          <button type="button" class="btn btn-secondary active-settings-btn" id="btnUsersPanel" data-panel="usersPanel" style="padding: 0.5rem 1rem;">Usuarios</button>
+          <button type="button" class="btn btn-secondary" id="btnTeamsPanel" data-panel="teamsPanel" style="padding: 0.5rem 1rem;">Equipos</button>
+          <button type="button" class="btn btn-secondary" id="btnConceptsPanel" data-panel="conceptsPanel" style="padding: 0.5rem 1rem;">Conceptos</button>
+          <button type="button" class="btn btn-secondary" id="btnCablesPanel" data-panel="cablesPanel" style="padding: 0.5rem 1rem;">Cables</button>
+          <button type="button" class="btn btn-secondary" id="btnMaterialsPanel" data-panel="materialsPanel" style="padding: 0.5rem 1rem;">Materiales</button>
+          <button type="button" class="btn btn-secondary" id="btnMantenimientoPanel" data-panel="mantenimientoPanel" style="padding: 0.5rem 1rem;">Ajustes Generales</button>
+          <button type="button" class="btn btn-secondary" id="btnCategoriesPanel" data-panel="categoriesPanel" style="padding: 0.5rem 1rem;">Títulos Imágenes</button>
+          <button type="button" class="btn btn-secondary" id="btnGroqPanel" data-panel="groqPanel" style="padding: 0.5rem 1rem;">API de Groq</button>
+          <button type="button" class="btn btn-secondary" id="btnThemePanel" data-panel="themePanel" style="padding: 0.5rem 1rem;">Apariencia</button>
         </div>
 
         <!-- 3.1 Panel Usuarios -->
@@ -883,6 +878,28 @@
           </div>
         </div>
 
+        <!-- 3.9 Panel Apariencia (Disponible para todos) -->
+        <div id="themePanel" class="settings-subpanel" style="display:none;">
+          <h2 style="font-size: 1.25rem; margin-bottom: 1rem; color: var(--color-accent); display: flex; align-items: center; gap: 0.5rem;">
+            <i data-lucide="palette" style="width: 20px; height: 20px; color: var(--color-accent);"></i> Apariencia y Tema
+          </h2>
+          <div class="glass-panel point-item" style="margin-bottom: 1.5rem; max-width: 500px;">
+            <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1.25rem;">
+              Personaliza el aspecto visual de la aplicación. Tu preferencia se guardará automáticamente en tu perfil.
+            </p>
+            <div class="form-group">
+              <label for="themeSelector" class="form-label">Tema Visual</label>
+              <select id="themeSelector" class="form-control" style="cursor: pointer; font-weight: 600;">
+                <option value="default">Cyber Neon</option>
+                <option value="midnight">Midnight Blue</option>
+                <option value="emerald">Emerald Forest</option>
+                <option value="sunset">Sunset Orchid</option>
+                <option value="carbon">Stealth Carbon</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
       </div>
     </section>
 
@@ -968,7 +985,12 @@
       </div>
 
       <div style="display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.5rem; border-top: 1px solid var(--border-color); padding-top: 1rem;">
-        <button type="button" id="orderViewerEditBtn" class="btn btn-primary" style="display: none;">✏️ Editar Orden</button>
+        <button type="button" id="orderViewerDeleteBtn" class="btn" style="display: none; background: #ef4444; color: #fff; border: none; align-items: center; gap: 0.35rem; cursor: pointer; padding: 0.4rem 0.8rem; font-size: 0.85rem; border-radius: var(--radius-sm); font-weight: 600;">
+          <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i> Borrar Orden
+        </button>
+        <button type="button" id="orderViewerEditBtn" class="btn btn-primary" style="display: none; align-items: center; gap: 0.35rem;">
+          <i data-lucide="edit-3" style="width: 14px; height: 14px;"></i> Editar Orden
+        </button>
         <button type="button" id="orderViewerCloseBtn" class="btn btn-secondary">Cerrar</button>
       </div>
     </div>

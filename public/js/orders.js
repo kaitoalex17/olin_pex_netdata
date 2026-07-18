@@ -40,6 +40,25 @@ document.addEventListener('DOMContentLoaded', () => {
   let currentCalendarMonth = today.getMonth() + 1; // 1-indexed (1-12)
   let selectedCalendarDate = ''; // YYYY-MM-DD
   let calendarEventsSummary = []; // Array of { fecha, status, count }
+  let currentUserRole = '';
+  let currentUserTeam = '';
+
+  async function fetchCurrentUserSession() {
+    try {
+      const res = await fetch('/api/auth/session');
+      const data = await res.json();
+      if (data.loggedIn) {
+        currentUserRole = data.user.role;
+        currentUserTeam = data.user.team_id;
+        // Trigger list reload once we have session info to render correct buttons
+        resetListPagination();
+        loadOrdersList(true);
+      }
+    } catch (e) {
+      console.error("Error al obtener sesión en orders.js:", e);
+    }
+  }
+  fetchCurrentUserSession();
 
   const MONTHS_ES = [
     "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
@@ -174,6 +193,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     bindOrderLoadButtons(ordersListContainer);
+    if (window.lucide) window.lucide.createIcons();
   }
 
   // --- EVENT LISTENERS DE LISTADO ---
@@ -238,121 +258,138 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   async function renderCalendar() {
-    // 1. Mostrar mes y año
-    calendarMonthTitle.textContent = `${MONTHS_ES[currentCalendarMonth - 1]} ${currentCalendarYear}`;
-    calendarDaysGrid.innerHTML = '';
-
-    // 2. Fetch mensual de indicadores desde la API
     try {
-      const monthStr = currentCalendarMonth.toString().padStart(2, '0');
-      const res = await fetch(`/api/tasks/calendar?year=${currentCalendarYear}&month=${monthStr}`);
-      calendarEventsSummary = res.ok ? await res.json() : [];
-    } catch (e) {
-      console.error(e);
-      calendarEventsSummary = [];
-    }
+      // 1. Mostrar mes y año
+      calendarMonthTitle.textContent = `${MONTHS_ES[currentCalendarMonth - 1]} ${currentCalendarYear}`;
+      calendarDaysGrid.innerHTML = '';
 
-    // 3. Obtener info de días del mes
-    const firstDayIndex = new Date(currentCalendarYear, currentCalendarMonth - 1, 1).getDay();
-    // Ajustar index para empezar en Lunes (getDay: 0 = Dom, 1 = Lun, 2 = Mar... 6 = Sáb)
-    const adjustedFirstDayIndex = firstDayIndex === 0 ? 6 : firstDayIndex - 1;
-    const totalDaysInMonth = new Date(currentCalendarYear, currentCalendarMonth, 0).getDate();
-
-    // 4. Renderizar celdas vacías del offset inicial
-    for (let i = 0; i < adjustedFirstDayIndex; i++) {
-      const emptyDiv = document.createElement('div');
-      emptyDiv.style.background = 'transparent';
-      calendarDaysGrid.appendChild(emptyDiv);
-    }
-
-    // 5. Renderizar días
-    for (let day = 1; day <= totalDaysInMonth; day++) {
-      const dayDiv = document.createElement('div');
-      dayDiv.className = 'glass-panel';
-      dayDiv.style.padding = '0.35rem';
-      dayDiv.style.minHeight = '65px';
-      dayDiv.style.display = 'flex';
-      dayDiv.style.flexDirection = 'column';
-      dayDiv.style.justifyContent = 'space-between';
-      dayDiv.style.cursor = 'pointer';
-      dayDiv.style.position = 'relative';
-      dayDiv.style.border = '1px solid rgba(255,255,255,0.05)';
-      dayDiv.style.borderRadius = 'var(--radius-sm)';
-      dayDiv.style.transition = 'all 0.2s';
-
-      const dateStr = `${currentCalendarYear}-${currentCalendarMonth.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
-
-      // Highlight para el día seleccionado
-      if (selectedCalendarDate === dateStr) {
-        dayDiv.style.borderColor = 'var(--color-info)';
-        dayDiv.style.background = 'rgba(0, 237, 255, 0.15)';
+      // 2. Fetch mensual de indicadores desde la API
+      try {
+        const monthStr = currentCalendarMonth.toString().padStart(2, '0');
+        const res = await fetch(`/api/tasks/calendar?year=${currentCalendarYear}&month=${monthStr}`);
+        calendarEventsSummary = res.ok ? await res.json() : [];
+      } catch (e) {
+        console.error("Error al obtener indicadores del calendario:", e);
+        calendarEventsSummary = [];
       }
 
-      // Resaltar hoy
-      const todayStr = new Date().toISOString().split('T')[0];
-      if (dateStr === todayStr) {
-        dayDiv.style.boxShadow = '0 0 10px rgba(0, 237, 255, 0.4)';
+      // 3. Obtener info de días del mes
+      const firstDayIndex = new Date(currentCalendarYear, currentCalendarMonth - 1, 1).getDay();
+      // Ajustar index para empezar en Lunes (getDay: 0 = Dom, 1 = Lun, 2 = Mar... 6 = Sáb)
+      const adjustedFirstDayIndex = firstDayIndex === 0 ? 6 : firstDayIndex - 1;
+      const totalDaysInMonth = new Date(currentCalendarYear, currentCalendarMonth, 0).getDate();
+
+      // 4. Renderizar celdas vacías del offset inicial
+      for (let i = 0; i < adjustedFirstDayIndex; i++) {
+        const emptyDiv = document.createElement('div');
+        emptyDiv.style.background = 'transparent';
+        calendarDaysGrid.appendChild(emptyDiv);
       }
 
-      // Número de día
-      const dayNum = document.createElement('span');
-      dayNum.textContent = day;
-      dayNum.style.fontSize = '0.75rem';
-      dayNum.style.fontWeight = '700';
-      dayNum.style.color = (dateStr === todayStr) ? 'var(--color-info)' : 'var(--text-secondary)';
-      dayDiv.appendChild(dayNum);
+      // 5. Renderizar días
+      for (let day = 1; day <= totalDaysInMonth; day++) {
+        const dayDiv = document.createElement('div');
+        dayDiv.className = 'glass-panel';
+        dayDiv.style.padding = '0.35rem';
+        dayDiv.style.minHeight = '65px';
+        dayDiv.style.display = 'flex';
+        dayDiv.style.flexDirection = 'column';
+        dayDiv.style.justifyContent = 'space-between';
+        dayDiv.style.cursor = 'pointer';
+        dayDiv.style.position = 'relative';
+        dayDiv.style.border = '1px solid rgba(255,255,255,0.05)';
+        dayDiv.style.borderRadius = 'var(--radius-sm)';
+        dayDiv.style.transition = 'all 0.2s';
 
-      // Buscar eventos para este día
-      const dayEvents = calendarEventsSummary.filter(e => {
-        if (!e.fecha) return false;
-        const dbDateClean = typeof e.fecha === 'string'
-          ? e.fecha.substring(0, 10)
-          : new Date(e.fecha).toISOString().substring(0, 10);
-        return dbDateClean === dateStr;
-      });
+        const dateStr = `${currentCalendarYear}-${currentCalendarMonth.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
 
-      if (dayEvents.length > 0) {
-        const indicators = document.createElement('div');
-        indicators.style.display = 'flex';
-        indicators.style.flexDirection = 'column';
-        indicators.style.gap = '2px';
-        
-        dayEvents.forEach(evt => {
-          const pill = document.createElement('div');
-          const isPendiente = evt.status === 'pendiente';
-          const bg = isPendiente ? 'var(--color-warning)' : 'var(--color-success)';
-          const textCol = isPendiente ? '#000' : '#fff';
+        // Highlight para el día seleccionado
+        if (selectedCalendarDate === dateStr) {
+          dayDiv.style.borderColor = 'var(--color-info)';
+          dayDiv.style.background = 'rgba(0, 237, 255, 0.15)';
+        }
+
+        // Resaltar hoy
+        const todayStr = new Date().toISOString().split('T')[0];
+        if (dateStr === todayStr) {
+          dayDiv.style.boxShadow = '0 0 10px rgba(0, 237, 255, 0.4)';
+        }
+
+        // Número de día
+        const dayNum = document.createElement('span');
+        dayNum.textContent = day;
+        dayNum.style.fontSize = '0.75rem';
+        dayNum.style.fontWeight = '700';
+        dayNum.style.color = (dateStr === todayStr) ? 'var(--color-info)' : 'var(--text-secondary)';
+        dayDiv.appendChild(dayNum);
+
+        // Buscar eventos para este día
+        let dayEvents = [];
+        if (Array.isArray(calendarEventsSummary)) {
+          dayEvents = calendarEventsSummary.filter(e => {
+            if (!e || !e.fecha) return false;
+            try {
+              const dbDateClean = typeof e.fecha === 'string'
+                ? e.fecha.substring(0, 10)
+                : new Date(e.fecha).toISOString().substring(0, 10);
+              return dbDateClean === dateStr;
+            } catch (err) {
+              console.error("Error parsing date in calendar event:", err);
+              return false;
+            }
+          });
+        }
+
+        if (dayEvents.length > 0) {
+          const indicators = document.createElement('div');
+          indicators.style.display = 'flex';
+          indicators.style.flexDirection = 'column';
+          indicators.style.gap = '2px';
           
-          pill.textContent = `${evt.count} ${isPendiente ? 'Pend' : 'Fin'}`;
-          pill.style.fontSize = '0.6rem';
-          pill.style.fontWeight = '700';
-          pill.style.padding = '1px 3px';
-          pill.style.borderRadius = '3px';
-          pill.style.background = bg;
-          pill.style.color = textCol;
-          pill.style.textAlign = 'center';
-          pill.style.whiteSpace = 'nowrap';
-          pill.style.overflow = 'hidden';
+          dayEvents.forEach(evt => {
+            const pill = document.createElement('div');
+            const isPendiente = evt.status === 'pendiente';
+            const bg = isPendiente ? 'var(--color-warning)' : 'var(--color-success)';
+            const textCol = isPendiente ? '#000' : '#fff';
+            
+            pill.textContent = `${evt.count} ${isPendiente ? 'Pend' : 'Fin'}`;
+            pill.style.fontSize = '0.6rem';
+            pill.style.fontWeight = '700';
+            pill.style.padding = '1px 3px';
+            pill.style.borderRadius = '3px';
+            pill.style.background = bg;
+            pill.style.color = textCol;
+            pill.style.textAlign = 'center';
+            pill.style.whiteSpace = 'nowrap';
+            pill.style.overflow = 'hidden';
+            
+            indicators.appendChild(pill);
+          });
           
-          indicators.appendChild(pill);
+          dayDiv.appendChild(indicators);
+        }
+
+        // Click event
+        dayDiv.addEventListener('click', () => {
+          selectedCalendarDate = dateStr;
+          // Re-renderizar calendario para reflejar la selección visual
+          document.querySelectorAll('#calendarDaysGrid > div').forEach(el => {
+            if (el.style.background !== 'transparent') {
+              el.style.borderColor = 'rgba(255,255,255,0.05)';
+            }
+          });
+          dayDiv.style.borderColor = 'var(--color-info)';
+          
+          loadCalendarDayOrders(dateStr);
         });
-        
-        dayDiv.appendChild(indicators);
+
+        calendarDaysGrid.appendChild(dayDiv);
       }
-
-      // Click event
-      dayDiv.addEventListener('click', () => {
-        selectedCalendarDate = dateStr;
-        // Re-renderizar calendario para reflejar la selección visual
-        document.querySelectorAll('#calendarDaysGrid > div').forEach(el => {
-          el.style.borderColor = 'rgba(255,255,255,0.05)';
-        });
-        dayDiv.style.borderColor = 'var(--color-info)';
-        
-        loadCalendarDayOrders(dateStr);
-      });
-
-      calendarDaysGrid.appendChild(dayDiv);
+    } catch (err) {
+      console.error("Error crítico en renderCalendar:", err);
+      if (calendarDaysGrid) {
+        calendarDaysGrid.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; color: var(--color-danger); padding: 2rem;">Error al renderizar el calendario: ${err.message}</div>`;
+      }
     }
   }
 
@@ -379,6 +416,7 @@ document.addEventListener('DOMContentLoaded', () => {
       });
 
       bindOrderLoadButtons(calendarDayOrdersContainer);
+      if (window.lucide) window.lucide.createIcons();
     } catch (e) {
       calendarDayOrdersContainer.innerHTML = '<div style="text-align: center; color: var(--color-danger); padding: 1.5rem;">Error al cargar tareas.</div>';
     }
@@ -425,11 +463,18 @@ document.addEventListener('DOMContentLoaded', () => {
     orderViewerTitle.textContent = `Orden #${taskId}`;
     orderViewerBody.innerHTML = '<div style="text-align:center; padding: 2rem; color: var(--text-secondary);">Cargando detalle de la orden...</div>';
     orderViewerEditBtn.style.display = 'none';
+    const orderViewerDeleteBtn = document.getElementById('orderViewerDeleteBtn');
+    if (orderViewerDeleteBtn) orderViewerDeleteBtn.style.display = 'none';
     orderViewerModal.classList.add('active');
 
     try {
       const res = await fetch(`/api/tasks/${taskId}`);
       const data = await res.json();
+
+      if (!res.ok) {
+        orderViewerBody.innerHTML = `<div style="text-align:center; padding: 2rem; color: var(--color-danger);">Error: ${data.error || 'No se pudo cargar la orden.'}</div>`;
+        return;
+      }
 
       if (!data.found) {
         orderViewerBody.innerHTML = '<div style="text-align:center; padding: 2rem; color: var(--color-danger);">Orden no encontrada.</div>';
@@ -447,6 +492,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (canEdit) {
         orderViewerEditBtn.style.display = 'inline-flex';
+        if (orderViewerDeleteBtn) orderViewerDeleteBtn.style.display = 'inline-flex';
       }
 
       // Construir el HTML de detalle
@@ -463,7 +509,7 @@ document.addEventListener('DOMContentLoaded', () => {
               <span style="color: var(--color-accent); font-weight: 600;">x${c.cantidad}</span>
             </div>`
           ).join('');
-          const comment = p.comentario ? `<div style="font-size: 0.75rem; color: var(--color-warning); margin-top: 0.25rem; font-style: italic;">💬 ${p.comentario}</div>` : '';
+          const comment = p.comentario ? `<div style="font-size: 0.75rem; color: var(--color-warning); margin-top: 0.25rem; font-style: italic; display: flex; align-items: center; gap: 0.25rem;"><i data-lucide="message-square" style="width: 12px; height: 12px; color: var(--color-warning);"></i> ${p.comentario}</div>` : '';
           return `
             <div class="glass-panel point-item" style="padding: 0.75rem; margin-bottom: 0.5rem;">
               <div style="font-weight: 700; font-size: 0.85rem; margin-bottom: 0.35rem; color: var(--color-info);">Punto ${i + 1} — ${p.ubicacion || 'Sin ubicación'}</div>
@@ -483,7 +529,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (matRows) {
           materialHtml = `
             <div style="margin-top: 1.25rem;">
-              <h4 style="font-size: 0.9rem; font-weight: 700; color: var(--color-accent); margin-bottom: 0.5rem;">📦 Material Utilizado</h4>
+              <h4 style="font-size: 0.9rem; font-weight: 700; color: var(--color-accent); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.35rem;">
+                <i data-lucide="package" style="width: 15px; height: 15px; color: var(--color-accent);"></i> Material Utilizado
+              </h4>
               <div class="glass-panel point-item" style="padding: 0.75rem;">${matRows}</div>
             </div>
           `;
@@ -499,7 +547,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (cabRows) {
           cableHtml = `
             <div style="margin-top: 1.25rem;">
-              <h4 style="font-size: 0.9rem; font-weight: 700; color: var(--color-info); margin-bottom: 0.5rem;">🔌 Cable Desplegado</h4>
+              <h4 style="font-size: 0.9rem; font-weight: 700; color: var(--color-info); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.35rem;">
+                <i data-lucide="zap" style="width: 15px; height: 15px; color: var(--color-info);"></i> Cable Desplegado
+              </h4>
               <div class="glass-panel point-item" style="padding: 0.75rem;">${cabRows}</div>
             </div>
           `;
@@ -510,7 +560,9 @@ document.addEventListener('DOMContentLoaded', () => {
       if (t.esUrgente && t.esUrgente.activa) {
         urgenteHtml = `
           <div style="background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); border-radius: var(--radius-sm); padding: 0.6rem; margin-top: 1rem;">
-            <span style="font-weight: 700; color: var(--color-danger); font-size: 0.85rem;">🚨 Tarea Urgente</span>
+            <span style="font-weight: 700; color: var(--color-danger); font-size: 0.85rem; display: flex; align-items: center; gap: 0.35rem;">
+              <i data-lucide="alert-triangle" style="width: 15px; height: 15px; color: var(--color-danger);"></i> Tarea Urgente
+            </span>
             <p style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.25rem;">${t.esUrgente.descripcion || 'Sin descripción'}</p>
           </div>
         `;
@@ -520,7 +572,9 @@ document.addEventListener('DOMContentLoaded', () => {
       if (t.tareaMantenimiento && t.tareaMantenimiento.activa) {
         mantenimientoHtml = `
           <div style="background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3); border-radius: var(--radius-sm); padding: 0.6rem; margin-top: 0.75rem;">
-            <span style="font-weight: 700; color: var(--color-warning); font-size: 0.85rem;">🔧 Tarea de Mantenimiento</span>
+            <span style="font-weight: 700; color: var(--color-warning); font-size: 0.85rem; display: flex; align-items: center; gap: 0.35rem;">
+              <i data-lucide="wrench" style="width: 15px; height: 15px; color: var(--color-warning);"></i> Tarea de Mantenimiento
+            </span>
             <p style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.25rem;">${t.tareaMantenimiento.descripcion || ''} ${t.tareaMantenimiento.informacionAdicional || ''}</p>
           </div>
         `;
@@ -530,7 +584,9 @@ document.addEventListener('DOMContentLoaded', () => {
       if (t.esSinExito && t.sinExito) {
         sinExitoHtml = `
           <div style="background: rgba(100,116,139,0.15); border: 1px solid rgba(100,116,139,0.3); border-radius: var(--radius-sm); padding: 0.6rem; margin-top: 0.75rem;">
-            <span style="font-weight: 700; color: var(--text-secondary); font-size: 0.85rem;">❌ Sin Éxito</span>
+            <span style="font-weight: 700; color: var(--text-secondary); font-size: 0.85rem; display: flex; align-items: center; gap: 0.35rem;">
+              <i data-lucide="x-circle" style="width: 15px; height: 15px; color: var(--text-secondary);"></i> Sin Éxito
+            </span>
             <p style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.25rem;">
               Motivo: ${t.sinExito.motivo || 'N/D'} · Visitas: ${t.sinExito.visitas || 'N/D'}
             </p>
@@ -572,7 +628,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         ${puntosHtml ? `
           <div style="margin-top: 1.25rem;">
-            <h4 style="font-size: 0.9rem; font-weight: 700; color: var(--color-info); margin-bottom: 0.5rem;">📌 Puntos de Trabajo (${t.puntosTrabajo.length})</h4>
+            <h4 style="font-size: 0.9rem; font-weight: 700; color: var(--color-info); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.35rem;">
+              <i data-lucide="map-pin" style="width: 15px; height: 15px; color: var(--color-info);"></i> Puntos de Trabajo (${t.puntosTrabajo.length})
+            </h4>
             ${puntosHtml}
           </div>
         ` : ''}
@@ -588,7 +646,9 @@ document.addEventListener('DOMContentLoaded', () => {
         <!-- Galería de Imágenes -->
         <div style="margin-top: 1.5rem;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
-            <h4 style="font-size: 0.9rem; font-weight: 700; color: var(--color-info); margin: 0;">📸 Galería de Imágenes</h4>
+            <h4 style="font-size: 0.9rem; font-weight: 700; color: var(--color-info); margin: 0; display: flex; align-items: center; gap: 0.35rem;">
+              <i data-lucide="image" style="width: 15px; height: 15px; color: var(--color-info);"></i> Galería de Imágenes
+            </h4>
             <span id="orderGalleryCount" style="font-size: 0.75rem; color: var(--text-secondary);">Cargando...</span>
           </div>
           <div id="orderGalleryGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 0.5rem; min-height: 60px;">
@@ -596,6 +656,8 @@ document.addEventListener('DOMContentLoaded', () => {
           </div>
         </div>
       `;
+
+      if (window.lucide) window.lucide.createIcons();
 
       // Cargar galería de imágenes
       loadOrderGallery(taskId);
@@ -719,6 +781,57 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // Borrar orden desde modal
+  const orderViewerDeleteBtn = document.getElementById('orderViewerDeleteBtn');
+  if (orderViewerDeleteBtn) {
+    orderViewerDeleteBtn.addEventListener('click', async () => {
+      if (!currentViewingTaskId) return;
+      
+      let confirmed = false;
+      if (window.showConfirm) {
+        confirmed = await window.showConfirm("¿Confirmar Eliminación?", `¿Estás seguro de que deseas eliminar permanentemente la orden #${currentViewingTaskId}? Esta acción no se puede deshacer.`);
+      } else {
+        confirmed = confirm(`¿Estás seguro de que deseas eliminar permanentemente la orden #${currentViewingTaskId}?`);
+      }
+
+      if (confirmed) {
+        try {
+          const res = await fetch(`/api/tasks/${currentViewingTaskId}`, { method: 'DELETE' });
+          const data = await res.json();
+          if (res.ok) {
+            if (window.showMessage) {
+              window.showMessage("Éxito", data.message || "Tarea eliminada correctamente.");
+            } else {
+              alert(data.message || "Tarea eliminada correctamente.");
+            }
+            closeOrderViewer();
+            
+            // Recargar la vista actual
+            if (ordersCalendarViewSection.style.display === 'block') {
+              renderCalendar();
+            } else {
+              resetListPagination();
+              loadOrdersList(true);
+            }
+          } else {
+            if (window.showMessage) {
+              window.showMessage("Error", data.error || "No se pudo eliminar la tarea.");
+            } else {
+              alert(data.error || "No se pudo eliminar la tarea.");
+            }
+          }
+        } catch (err) {
+          console.error("Error al borrar tarea:", err);
+          if (window.showMessage) {
+            window.showMessage("Error", "Error de conexión al eliminar la tarea.");
+          } else {
+            alert("Error de conexión al eliminar la tarea.");
+          }
+        }
+      }
+    });
+  }
+
   // --- CARD GENERATOR HELPERS ---
 
   function createOrderCard(order) {
@@ -749,6 +862,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     const puntosTexto = puntosVal.toFixed(2);
 
+    const canModify = currentUserRole === 'admin' || order.equipo === currentUserTeam;
+
     card.innerHTML = `
       <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
         <div>
@@ -768,12 +883,17 @@ document.addEventListener('DOMContentLoaded', () => {
       </div>
       
       <div style="display:flex; justify-content: flex-end; gap: 0.5rem; margin-top:0.5rem;">
-        <button type="button" class="btn btn-secondary view-order-btn" data-id="${order.id}" style="padding:0.4rem 0.8rem; font-size:0.85rem;">
-          👁️ Ver
+        <button type="button" class="btn btn-secondary view-order-btn" data-id="${order.id}" style="padding:0.4rem 0.8rem; font-size:0.85rem; display: inline-flex; align-items: center; gap: 0.35rem;">
+          <i data-lucide="eye" style="width: 14px; height: 14px;"></i> Ver
         </button>
-        <button type="button" class="btn btn-secondary load-order-btn" data-id="${order.id}" style="padding:0.4rem 0.8rem; font-size:0.85rem;">
-          ${isPendiente ? '✏️ Completar' : '✏️ Editar'}
-        </button>
+        ${canModify ? `
+          <button type="button" class="btn btn-secondary load-order-btn" data-id="${order.id}" style="padding:0.4rem 0.8rem; font-size:0.85rem; display: inline-flex; align-items: center; gap: 0.35rem;">
+            <i data-lucide="${isPendiente ? 'check-square' : 'edit-3'}" style="width: 14px; height: 14px;"></i> ${isPendiente ? 'Completar' : 'Editar'}
+          </button>
+          <button type="button" class="btn delete-order-btn" data-id="${order.id}" style="background: #ef4444; color: #fff; border: none; padding:0.4rem 0.8rem; font-size:0.85rem; display: inline-flex; align-items: center; gap: 0.35rem; cursor: pointer; border-radius: var(--radius-sm); font-weight: 600;">
+            <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i> Borrar
+          </button>
+        ` : ''}
       </div>
     `;
     return card;
@@ -803,6 +923,54 @@ document.addEventListener('DOMContentLoaded', () => {
         // Disparar búsqueda de la tarea en app.js
         if (window.buscarTareaPorId) {
           window.buscarTareaPorId(taskId);
+        }
+      });
+    });
+
+    // Botón "Borrar" — Elimina de base de datos y Firestore
+    parentContainer.querySelectorAll('.delete-order-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const taskId = btn.getAttribute('data-id');
+        
+        let confirmed = false;
+        if (window.showConfirm) {
+          confirmed = await window.showConfirm("¿Confirmar Eliminación?", `¿Estás seguro de que deseas eliminar permanentemente la tarea #${taskId}? Esta acción no se puede deshacer.`);
+        } else {
+          confirmed = confirm(`¿Estás seguro de que deseas eliminar permanentemente la tarea #${taskId}?`);
+        }
+
+        if (confirmed) {
+          try {
+            const res = await fetch(`/api/tasks/${taskId}`, { method: 'DELETE' });
+            const data = await res.json();
+            if (res.ok) {
+              if (window.showMessage) {
+                window.showMessage("Éxito", data.message || "Tarea eliminada correctamente.");
+              } else {
+                alert(data.message || "Tarea eliminada correctamente.");
+              }
+              // Recargar la vista actual
+              if (ordersCalendarViewSection.style.display === 'block') {
+                renderCalendar();
+              } else {
+                resetListPagination();
+                loadOrdersList(true);
+              }
+            } else {
+              if (window.showMessage) {
+                window.showMessage("Error", data.error || "No se pudo eliminar la tarea.");
+              } else {
+                alert(data.error || "No se pudo eliminar la tarea.");
+              }
+            }
+          } catch (err) {
+            console.error("Error al borrar tarea:", err);
+            if (window.showMessage) {
+              window.showMessage("Error", "Error de conexión al eliminar la tarea.");
+            } else {
+              alert("Error de conexión al eliminar la tarea.");
+            }
+          }
         }
       });
     });

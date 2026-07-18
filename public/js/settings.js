@@ -17,6 +17,54 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
+  // Obtener la sesión del usuario para ajustar visibilidad de paneles
+  async function checkSettingsRole() {
+    try {
+      const res = await fetch('/api/auth/session');
+      const data = await res.json();
+      if (data.loggedIn) {
+        const role = data.user.role;
+        const btnUsers = document.getElementById('btnUsersPanel');
+        const btnTeams = document.getElementById('btnTeamsPanel');
+        const btnConcepts = document.getElementById('btnConceptsPanel');
+        const btnCables = document.getElementById('btnCablesPanel');
+        const btnMaterials = document.getElementById('btnMaterialsPanel');
+        const btnMantenimiento = document.getElementById('btnMantenimientoPanel');
+        const btnCategories = document.getElementById('btnCategoriesPanel');
+        const btnGroq = document.getElementById('btnGroqPanel');
+        const btnTheme = document.getElementById('btnThemePanel');
+
+        if (role !== 'admin') {
+          // Ocultar botones admin
+          if (btnUsers) btnUsers.style.display = 'none';
+          if (btnTeams) btnTeams.style.display = 'none';
+          if (btnConcepts) btnConcepts.style.display = 'none';
+          if (btnCables) btnCables.style.display = 'none';
+          if (btnMaterials) btnMaterials.style.display = 'none';
+          if (btnMantenimiento) btnMantenimiento.style.display = 'none';
+          if (btnCategories) btnCategories.style.display = 'none';
+          if (btnGroq) btnGroq.style.display = 'none';
+
+          // Mostrar y activar Apariencia
+          if (btnTheme) {
+            btnTheme.style.display = 'block';
+            btnTheme.click(); // Mostrar panel de apariencia por defecto
+          }
+        } else {
+          // Si es admin, mostrar todo y activar Usuarios por defecto
+          if (btnUsers) {
+            btnUsers.click();
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Error al verificar rol en ajustes:", err);
+    }
+  }
+  checkSettingsRole().then(() => {
+    if (window.lucide) window.lucide.createIcons();
+  });
+
   // Configuración de Formularios y Elementos
   const userForm = document.getElementById('userForm');
   const userIdInput = document.getElementById('userIdInput');

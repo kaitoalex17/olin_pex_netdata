@@ -237,7 +237,46 @@ async function getTaskBackup(taskId) {
   }
 }
 
+/**
+ * Elimina una tarea de Firestore (colección datosv4) como respaldo
+ */
+async function deleteTaskBackup(taskId) {
+  if (useAdmin && adminSdk) {
+    try {
+      await adminSdk.collection('datosv4').doc(taskId).delete();
+      console.log(`[Firebase Admin] Respaldo eliminado para tarea ${taskId}`);
+      return true;
+    } catch (error) {
+      console.error(`[Firebase Admin] Error eliminando tarea ${taskId}:`, error);
+      return false;
+    }
+  }
+
+  // Fallback a API REST
+  try {
+    const token = await getAnonymousToken();
+    const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/datosv4/${taskId}?key=${apiKey}`;
+    const response = await fetch(url, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`API REST Error: ${response.status}`);
+    }
+
+    console.log(`[Firebase REST] Respaldo de tarea ${taskId} eliminado.`);
+    return true;
+  } catch (error) {
+    console.error(`[Firebase REST] Error eliminando tarea ${taskId}:`, error.message);
+    return false;
+  }
+}
+
 module.exports = {
   saveTaskBackup,
-  getTaskBackup
+  getTaskBackup,
+  deleteTaskBackup
 };

@@ -128,14 +128,14 @@ document.addEventListener('DOMContentLoaded', async () => {
       let glowClass = '';
 
       if (rank === 1) {
-        badge = '<span style="font-size: 1.5rem; filter: drop-shadow(0 0 5px rgba(245,158,11,0.5));">🥇</span>';
+        badge = '<i data-lucide="trophy" style="width: 22px; height: 22px; color: #fbbf24; filter: drop-shadow(0 0 5px rgba(251,191,36,0.5));"></i>';
         glowClass = 'box-shadow: 0 0 15px rgba(245, 158, 11, 0.15); border-color: rgba(245, 158, 11, 0.4);';
       } else if (rank === 2) {
-        badge = '<span style="font-size: 1.4rem; filter: drop-shadow(0 0 5px rgba(203,213,225,0.5));">🥈</span>';
+        badge = '<i data-lucide="award" style="width: 20px; height: 20px; color: #cbd5e1; filter: drop-shadow(0 0 5px rgba(203,213,225,0.5));"></i>';
         glowClass = 'box-shadow: 0 0 10px rgba(203, 213, 225, 0.1); border-color: rgba(203, 213, 225, 0.3);';
       } else if (rank === 3) {
-        badge = '<span style="font-size: 1.3rem; filter: drop-shadow(0 0 5px rgba(217,119,6,0.5));">🥉</span>';
-        glowClass = 'box-shadow: 0 0 10px rgba(217, 119, 6, 0.1); border-color: rgba(217, 119, 6, 0.3);';
+        badge = '<i data-lucide="award" style="width: 18px; height: 18px; color: #b45309; filter: drop-shadow(0 0 5px rgba(180,83,9,0.5));"></i>';
+        glowClass = 'box-shadow: 0 0 10px rgba(217, 11, 6, 0.1); border-color: rgba(217, 119, 6, 0.3);';
       } else {
         badge = `<span style="display: inline-block; width: 24px; height: 24px; line-height: 24px; background: rgba(255,255,255,0.1); border-radius: 50%; font-size: 0.75rem; font-weight: 700; color: var(--text-secondary); text-align: center;">${rank}</span>`;
       }
@@ -176,6 +176,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       leaderboardContainer.appendChild(card);
     });
+    if (window.lucide) window.lucide.createIcons();
   }
 
   function renderMonthlyGoals(summary, userTeam) {
@@ -200,19 +201,19 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Mensaje motivacional personalizado
     if (percentage >= 100) {
-      goalsMessage.textContent = "🎉 ¡Excelente! Objetivo mensual superado con éxito. ¡Gran trabajo en equipo!";
+      goalsMessage.textContent = "¡Excelente! Objetivo mensual superado con éxito. ¡Gran trabajo en equipo!";
       goalsProgressBar.style.background = 'linear-gradient(90deg, var(--color-success), #10b981)';
     } else if (percentage >= 75) {
-      goalsMessage.textContent = "💪 ¡Ya casi está! Te falta muy poco para conseguir la meta del mes.";
+      goalsMessage.textContent = "¡Ya casi está! Te falta muy poco para conseguir la meta del mes.";
       goalsProgressBar.style.background = 'var(--color-info)';
     } else if (percentage >= 40) {
-      goalsMessage.textContent = "⚡ ¡Buen ritmo! Sigue sumando puntos día a día con el equipo.";
+      goalsMessage.textContent = "¡Buen ritmo! Sigue sumando puntos día a día con el equipo.";
       goalsProgressBar.style.background = 'var(--color-info)';
     } else if (points > 0) {
-      goalsMessage.textContent = "🚀 Paso a paso. ¡Cada orden cuenta para alcanzar la meta!";
+      goalsMessage.textContent = "Paso a paso. ¡Cada orden cuenta para alcanzar la meta!";
       goalsProgressBar.style.background = 'var(--color-info)';
     } else {
-      goalsMessage.textContent = "📅 Comienza el mes sumando tus primeros puntos de trabajo.";
+      goalsMessage.textContent = "Comienza el mes sumando tus primeros puntos de trabajo.";
       goalsProgressBar.style.background = 'var(--color-info)';
     }
   }

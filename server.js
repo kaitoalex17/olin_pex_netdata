@@ -636,6 +636,35 @@ app.post('/api/tasks', requireAuth, async (req, res) => {
   }
 });
 
+// Borrar Tarea
+app.delete('/api/tasks/:id', requireAuth, async (req, res) => {
+  const taskId = req.params.id;
+  try {
+    const existing = await db.query('SELECT equipo FROM tasks WHERE id = $1', [taskId]);
+    if (existing.rows.length === 0) {
+      return res.status(404).json({ error: 'La tarea no existe.' });
+    }
+
+    // Verificar permisos si es Técnico (solo puede borrar las de su propio equipo)
+    if (req.session.userRole === 'tecnico' && existing.rows[0].equipo !== req.session.teamId) {
+      return res.status(403).json({ error: 'No tienes permisos para borrar tareas de otro equipo.' });
+    }
+
+    // Borrar de Postgres
+    await db.query('DELETE FROM tasks WHERE id = $1', [taskId]);
+
+    // Borrar de Firebase (Firestore) en segundo plano
+    firebase.deleteTaskBackup(taskId).catch(err => {
+      console.error(`Fallo al eliminar el respaldo en Firebase para tarea ${taskId}:`, err.message);
+    });
+
+    res.json({ success: true, message: 'Tarea eliminada con éxito.' });
+  } catch (error) {
+    console.error("Error al borrar tarea:", error);
+    res.status(500).json({ error: 'Error del servidor al eliminar la tarea.' });
+  }
+});
+
 // Buscar Tarea por ID (Consulta local + fallback Firestore)
 app.get('/api/tasks/:id', requireAuth, async (req, res) => {
   const taskId = req.params.id;
@@ -660,7 +689,7 @@ app.get('/api/tasks/:id', requireAuth, async (req, res) => {
       // Mapear campos PostgreSQL al JSON esperado por el frontend
       const frontendTask = {
         id: task.id,
-        fecha: task.fecha.toISOString().split('T')[0],
+        fecha: typeof task.fecha === 'string' ? task.fecha.split('T')[0] : task.fecha.toISOString().split('T')[0],
         equipo: task.equipo,
         integrantes: task.integrantes,
         ubicacion: task.ubicacion,
@@ -1023,7 +1052,7 @@ app.get('/api/generate-pdf/:taskId', requireAuth, async (req, res) => {
     // Contenido
     doc.fontSize(20).text(`NetData - Reporte de Tarea #${task.id}`, { align: 'center' });
     doc.moveDown();
-    doc.fontSize(12).text(`Fecha: ${task.fecha.toISOString().split('T')[0]}`);
+    doc.fontSize(12).text(`Fecha: ${typeof task.fecha === 'string' ? task.fecha.split('T')[0] : task.fecha.toISOString().split('T')[0]}`);
     doc.text(`Equipo: ${task.equipo}`);
     doc.text(`Integrantes: ${task.integrantes}`);
     doc.text(`Ubicación: ${task.ubicacion || 'No especificada'}`);

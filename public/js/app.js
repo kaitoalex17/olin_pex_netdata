@@ -202,10 +202,8 @@ document.addEventListener('DOMContentLoaded', () => {
       reportsLink.style.display = 'block';
     }
 
-    if (role === 'admin') {
-      if (settingsLink) settingsLink.style.display = 'block';
-    } else {
-      if (settingsLink) settingsLink.style.display = 'none';
+    if (settingsLink) {
+      settingsLink.style.display = 'block';
     }
   }
 
@@ -568,11 +566,11 @@ document.addEventListener('DOMContentLoaded', () => {
       
       <!-- Botones de Acción para Nota e Imágenes -->
       <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
-        <button type="button" class="btn btn-secondary toggle-comment-btn" style="flex: 1; padding: 0.35rem; font-size: 0.75rem; background: rgba(245, 158, 11, 0.05); border-color: rgba(245, 158, 11, 0.2); color: var(--color-warning);">
-          📝 Nota/Comentario
+        <button type="button" class="btn btn-secondary toggle-comment-btn" style="flex: 1; padding: 0.35rem; font-size: 0.75rem; background: rgba(245, 158, 11, 0.05); border-color: rgba(245, 158, 11, 0.2); color: var(--color-warning); display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem;">
+          <i data-lucide="message-square" style="width: 12px; height: 12px;"></i> Nota/Comentario
         </button>
-        <button type="button" class="btn btn-secondary toggle-images-btn" style="flex: 1; padding: 0.35rem; font-size: 0.75rem; background: rgba(0, 237, 255, 0.05); border-color: rgba(0, 237, 255, 0.2); color: var(--color-info);">
-          📸 Fotos / Imágenes
+        <button type="button" class="btn btn-secondary toggle-images-btn" style="flex: 1; padding: 0.35rem; font-size: 0.75rem; background: rgba(0, 237, 255, 0.05); border-color: rgba(0, 237, 255, 0.2); color: var(--color-info); display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem;">
+          <i data-lucide="image" style="width: 12px; height: 12px;"></i> Fotos / Imágenes
         </button>
       </div>
 
@@ -724,6 +722,7 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
       addConceptRow(conceptsContainer);
     }
+    if (window.lucide) window.lucide.createIcons();
   }
   addPointBtn.addEventListener('click', () => addPointSection());
 
@@ -1501,6 +1500,7 @@ document.addEventListener('DOMContentLoaded', () => {
   async function startup() {
     await checkSession();
     await loadCatalogs();
+    if (window.lucide) window.lucide.createIcons();
 
     // Ocultar pantalla de carga
     loadingOverlay.style.opacity = '0';
