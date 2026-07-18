@@ -198,15 +198,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const reportsLink = document.getElementById('navReportsLink');
     const settingsLink = document.getElementById('navSettingsLink');
 
+    if (reportsLink) {
+      reportsLink.style.display = 'block';
+    }
+
     if (role === 'admin') {
-      reportsLink.style.display = 'block';
-      settingsLink.style.display = 'block';
-    } else if (role === 'coordinador' || role === 'gestor') {
-      reportsLink.style.display = 'block';
-      settingsLink.style.display = 'none';
+      if (settingsLink) settingsLink.style.display = 'block';
     } else {
-      reportsLink.style.display = 'none';
-      settingsLink.style.display = 'none';
+      if (settingsLink) settingsLink.style.display = 'none';
     }
   }
 

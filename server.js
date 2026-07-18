@@ -429,8 +429,8 @@ app.post('/api/tasks', requireAuth, async (req, res) => {
   try {
     // Si es Técnico, validar que no esté modificando una tarea de otro equipo
     if (req.session.userRole === 'tecnico') {
-      const existing = await db.query('SELECT team_id FROM tasks WHERE id = $1', [taskId]);
-      if (existing.rows.length > 0 && existing.rows[0].team_id !== req.session.teamId) {
+      const existing = await db.query('SELECT equipo FROM tasks WHERE id = $1', [taskId]);
+      if (existing.rows.length > 0 && existing.rows[0].equipo !== req.session.teamId) {
         return res.status(403).json({ error: 'No tienes permisos para modificar tareas de otro equipo.' });
       }
       // Sobrescribir el equipo en el payload con el equipo del usuario
@@ -927,15 +927,18 @@ app.post('/api/parse-task', requireAuth, async (req, res) => {
 
 // --- DESCARGA DE INFORMES DE PRODUCTIVIDAD (GESTOR, COORDINADOR, ADMIN) ---
 
-app.get('/api/reports/productivity', requireAuth, requireRole(['admin', 'coordinador', 'gestor']), async (req, res) => {
+app.get('/api/reports/productivity', requireAuth, async (req, res) => {
   const { startDate, endDate } = req.query;
 
   if (!startDate || !endDate) {
     return res.status(400).json({ error: 'startDate y endDate son requeridos en formato AAAA-MM-DD.' });
   }
 
+  const isTecnico = req.session.userRole === 'tecnico';
+  const teamId = req.session.teamId;
+
   try {
-    // 1. Resumen por equipo
+    // 1. Resumen por equipo (Ranking) - Visible para todos
     const teamProductivity = await db.query(`
       SELECT equipo, SUM(puntos_totales_estimados) as total_puntos, COUNT(id) as total_tareas
       FROM tasks
@@ -944,17 +947,38 @@ app.get('/api/reports/productivity', requireAuth, requireRole(['admin', 'coordin
       ORDER BY total_puntos DESC
     `, [startDate, endDate]);
 
-    // 2. Detalle de todas las tareas en el rango
-    const taskDetails = await db.query(`
-      SELECT id, fecha, equipo, integrantes, ubicacion, puntos_totales_estimados, es_sin_exito
+    // 2. Detalle de tareas - Filtrado por equipo si es técnico
+    let taskDetailsQuery = `
+      SELECT id, fecha, equipo, integrantes, ubicacion, puntos_totales_estimados, es_sin_exito, status, gasto_material
       FROM tasks
       WHERE fecha BETWEEN $1 AND $2
-      ORDER BY fecha DESC, id DESC
-    `, [startDate, endDate]);
+    `;
+    const taskDetailsParams = [startDate, endDate];
+
+    if (isTecnico) {
+      taskDetailsParams.push(teamId);
+      taskDetailsQuery += ` AND equipo = $3`;
+    }
+    
+    taskDetailsQuery += ` ORDER BY fecha DESC, id DESC`;
+    const taskDetails = await db.query(taskDetailsQuery, taskDetailsParams);
+
+    // 3. Calcular consumo de materiales consolidado en el rango
+    const materialsSummary = {};
+    taskDetails.rows.forEach(task => {
+      const matObj = task.gasto_material || {};
+      for (const matKey in matObj) {
+        const qty = parseInt(matObj[matKey], 10) || 0;
+        if (qty > 0) {
+          materialsSummary[matKey] = (materialsSummary[matKey] || 0) + qty;
+        }
+      }
+    });
 
     res.json({
       summary: teamProductivity.rows,
-      tasks: taskDetails.rows
+      tasks: taskDetails.rows,
+      materials: materialsSummary
     });
   } catch (error) {
     console.error("Error al calcular informes:", error);
@@ -1107,33 +1131,100 @@ app.delete('/api/config/image-categories/:id', requireAuth, requireRole(['admin'
   }
 });
 
-// Listar tareas del equipo o generales
+// Listar tareas del equipo o generales con filtros y paginación
 app.get('/api/tasks/list/team', requireAuth, async (req, res) => {
   try {
-    let query = '';
-    const params = [];
+    const limit = parseInt(req.query.limit, 10) || 50;
+    const offset = parseInt(req.query.offset, 10) || 0;
+    const search = req.query.search || '';
+    const status = req.query.status || 'all'; // all, pendiente, finalizada
+    const date = req.query.date || ''; // Filtro por fecha específica
     
+    const params = [];
+    let query = `
+      SELECT id, fecha, equipo, integrantes, ubicacion, puntos_totales_estimados, es_sin_exito, status, created_at 
+      FROM tasks
+    `;
+    const clauses = [];
+
+    // 1. Restringir por equipo si es técnico
     if (req.session.userRole === 'tecnico') {
-      query = `
-        SELECT id, fecha, equipo, integrantes, ubicacion, puntos_totales_estimados, es_sin_exito, status, created_at 
-        FROM tasks 
-        WHERE equipo = $1 
-        ORDER BY fecha DESC, created_at DESC
-      `;
       params.push(req.session.teamId);
-    } else {
-      query = `
-        SELECT id, fecha, equipo, integrantes, ubicacion, puntos_totales_estimados, es_sin_exito, status, created_at 
-        FROM tasks 
-        ORDER BY fecha DESC, created_at DESC
-      `;
+      clauses.push(`equipo = $${params.length}`);
     }
+
+    // 2. Filtro de búsqueda
+    if (search) {
+      params.push(`%${search.trim().toLowerCase()}%`);
+      const searchIdx = params.length;
+      clauses.push(`(
+        LOWER(id) LIKE $${searchIdx} OR 
+        LOWER(equipo) LIKE $${searchIdx} OR 
+        LOWER(integrantes) LIKE $${searchIdx} OR 
+        LOWER(ubicacion) LIKE $${searchIdx}
+      )`);
+    }
+
+    // 3. Filtro de estado
+    if (status !== 'all') {
+      params.push(status);
+      clauses.push(`status = $${params.length}`);
+    }
+
+    // 4. Filtro por fecha concreta (ej: para el calendario)
+    if (date) {
+      params.push(date);
+      clauses.push(`fecha = $${params.length}`);
+    }
+
+    if (clauses.length > 0) {
+      query += ' WHERE ' + clauses.join(' AND ');
+    }
+
+    query += ` ORDER BY fecha DESC, created_at DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
+    params.push(limit, offset);
 
     const result = await db.query(query, params);
     res.json(result.rows);
   } catch (error) {
     console.error("Error al obtener lista de tareas:", error);
     res.status(500).json({ error: 'Error del servidor al obtener la lista de tareas.' });
+  }
+});
+
+// Obtener datos resumidos de tareas para calendario por mes
+app.get('/api/tasks/calendar', requireAuth, async (req, res) => {
+  const { year, month } = req.query;
+  if (!year || !month) {
+    return res.status(400).json({ error: 'Año y mes requeridos.' });
+  }
+  
+  const startDate = `${year}-${month}-01`;
+  const endDate = new Date(parseInt(year, 10), parseInt(month, 10), 0).toISOString().split('T')[0];
+
+  try {
+    const isTecnico = req.session.userRole === 'tecnico';
+    const teamId = req.session.teamId;
+
+    let query = `
+      SELECT fecha, status, COUNT(*) as count 
+      FROM tasks 
+      WHERE fecha BETWEEN $1 AND $2
+    `;
+    const params = [startDate, endDate];
+
+    if (isTecnico) {
+      params.push(teamId);
+      query += ` AND equipo = $3`;
+    }
+
+    query += ` GROUP BY fecha, status ORDER BY fecha`;
+
+    const result = await db.query(query, params);
+    res.json(result.rows);
+  } catch (e) {
+    console.error("Error al consultar calendario:", e);
+    res.status(500).json({ error: 'Error al consultar calendario.' });
   }
 });
 
